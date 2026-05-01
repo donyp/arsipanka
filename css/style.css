@@ -1,0 +1,582 @@
+/* ============================================================
+   Sistem Arsip Digital - Custom Styles
+   ============================================================ */
+
+/* ---- CSS Variables ---- */
+:root {
+    --primary: #6366f1;
+    --primary-light: #818cf8;
+    --primary-dark: #4f46e5;
+    --accent: #06b6d4;
+    --surface: #0f172a;
+    --surface-2: #1e293b;
+    --surface-3: #334155;
+    --border: rgba(255, 255, 255, 0.08);
+    --text: #f1f5f9;
+    --text-muted: #94a3b8;
+}
+
+/* ---- Global ---- */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.3);
+    border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.5);
+}
+
+body {
+    background-color: var(--surface);
+    font-family: 'Inter', sans-serif;
+}
+
+/* ---- Animated Background ---- */
+.bg-animated {
+    background: linear-gradient(-45deg, #0f172a, #1a1a3e, #0f172a, #1e1b4b);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* ---- Glassmorphism Card ---- */
+.glass-card {
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card-light {
+    background: rgba(30, 41, 59, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ---- Glow Effects ---- */
+.glow-primary {
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.15),
+        0 0 60px rgba(99, 102, 241, 0.05);
+}
+
+.glow-accent {
+    box-shadow: 0 0 30px rgba(6, 182, 212, 0.15),
+        0 0 60px rgba(6, 182, 212, 0.05);
+}
+
+/* ---- Animations ---- */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 40px rgba(99, 102, 241, 0.4);
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+.animate-slide-out {
+    animation: slideOut 0.3s ease-in forwards;
+}
+
+.animate-scale-in {
+    animation: scaleIn 0.25s ease-out;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.4s ease-out;
+}
+
+.animate-pulse-glow {
+    animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+/* Staggered animations */
+.stagger-1 {
+    animation-delay: 0.05s;
+}
+
+.stagger-2 {
+    animation-delay: 0.1s;
+}
+
+.stagger-3 {
+    animation-delay: 0.15s;
+}
+
+.stagger-4 {
+    animation-delay: 0.2s;
+}
+
+/* ---- Sidebar ---- */
+.sidebar {
+    transition: width 0.3s ease, transform 0.3s ease;
+}
+
+.sidebar-link {
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--primary);
+    transform: scaleY(0);
+    transition: transform 0.2s ease;
+    border-radius: 0 4px 4px 0;
+}
+
+.sidebar-link:hover,
+.sidebar-link.active {
+    background: rgba(99, 102, 241, 0.1);
+    color: #fff;
+}
+
+.sidebar-link:hover::before,
+.sidebar-link.active::before {
+    transform: scaleY(1);
+}
+
+/* ---- Table ---- */
+.data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.data-table thead th {
+    background: #162032;
+    /* solid color matching the dark theme */
+    padding: 12px 16px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.data-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.data-table tbody td {
+    padding: 12px 16px;
+    font-size: 0.875rem;
+    color: #e2e8f0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* ---- Drag & Drop Zone ---- */
+.drop-zone {
+    border: 2px dashed rgba(99, 102, 241, 0.3);
+    transition: all 0.3s ease;
+}
+
+.drop-zone.dragover {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.08);
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.1) inset;
+}
+
+/* ---- Progress Bar ---- */
+.progress-bar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    border-radius: 999px;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.3) 50%,
+            transparent 100%);
+    animation: progressShimmer 1.5s ease infinite;
+}
+
+@keyframes progressShimmer {
+    from {
+        transform: translateX(-100%);
+    }
+
+    to {
+        transform: translateX(100%);
+    }
+}
+
+/* ---- Custom Inputs ---- */
+.input-field {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #f1f5f9;
+    transition: all 0.2s ease;
+}
+
+.input-field:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    outline: none;
+}
+
+.input-field::placeholder {
+    color: #475569;
+}
+
+input[type="date"].input-field {
+    color-scheme: dark;
+}
+
+input[type="date"].input-field::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.5;
+    transition: all 0.2s ease;
+}
+
+input[type="date"].input-field::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+select.input-field {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.2em;
+    padding-right: 2.5rem;
+    cursor: pointer;
+}
+
+select.input-field option {
+    background-color: var(--surface-2);
+    color: var(--text);
+    padding: 12px 16px;
+    font-size: 14px;
+}
+
+select.input-field option:hover {
+    background-color: var(--primary);
+}
+
+/* ---- Buttons ---- */
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary:hover {
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-ghost {
+    background: rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.2s ease;
+}
+
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ---- Badge ---- */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 9999px;
+    border: 1px solid;
+}
+
+/* ---- Particles (Login BG) ---- */
+.particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0.15;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        position: fixed;
+        z-index: 40;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .mobile-overlay {
+        display: none;
+    }
+
+    .mobile-overlay.active {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 35;
+    }
+}
+
+/* ---- Preview Modal ---- */
+.preview-modal {
+    animation: fadeIn 0.2s ease-out;
+}
+
+.preview-modal-content {
+    animation: scaleIn 0.25s ease-out;
+}
+
+/* ---- Stats Card ---- */
+.stat-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stat-card:hover::before {
+    opacity: 1;
+}
+
+/* ---- Empty State ---- */
+.empty-state {
+    padding: 4rem 2rem;
+    text-align: center;
+    color: #64748b;
+}
+
+.empty-state svg {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1rem;
+    opacity: 0.3;
+}
+
+/* ---- Custom Checkbox ---- */
+.custom-checkbox {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.custom-checkbox:hover {
+    border-color: var(--primary-light);
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.custom-checkbox:checked {
+    background: var(--primary);
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.custom-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* ---- Bulk Action Bar ---- */
+.bulk-floating-bar {
+    position: fixed;
+    bottom: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    pointer-events: none;
+}
+
+.bulk-floating-bar.active {
+    bottom: 32px;
+    pointer-events: auto;
+}
+
+.bulk-inner {
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px 24px;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}

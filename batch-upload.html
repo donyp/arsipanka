@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Upload — Arsip Digital</title>
+    <meta name="description" content="Kirim Data Arsip Masal via Excel">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .drag-active {
+            border-color: #6366f1;
+            background-color: rgba(99, 102, 241, 0.05);
+        }
+
+        .excel-table-container {
+            max-height: calc(100vh - 450px);
+            overflow-y: auto;
+        }
+
+        .row-status-pending {
+            color: #9ca3af;
+        }
+
+        .row-status-ready {
+            color: #f59e0b;
+        }
+
+        .row-status-uploading {
+            color: #6366f1;
+        }
+
+        .row-status-success {
+            color: #10b981;
+        }
+
+        .row-status-error {
+            color: #ef4444;
+        }
+    </style>
+</head>
+
+<body class="bg-[#0f172a] min-h-screen text-gray-200">
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
+
+            <!-- Sidebar -->
+    <aside id="sidebar"
+        class="sidebar fixed top-0 left-0 h-full w-64 bg-[#0c1222] border-r border-white/5 flex flex-col z-40">
+        <div class="p-5 border-b border-white/5">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-white">Arsip Digital</h1>
+                    <span class="text-xs text-gray-500">Multi-Zona System</span>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+            <a href="dashboard.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Dashboard
+            </a>
+            <a href="upload.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Upload Invoice Merah
+            </a>
+            <a href="piutang.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Bukti Pembayaran Piutang
+            </a>
+            <a href="javascript:void(0)" data-role="super_admin" onclick="Toast.info('Fitur ini akan segera hadir!')"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-500 opacity-60 cursor-not-allowed">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2a4 4 0 00-4-4H5m11 0h.01M13 18l3 3m0 0l3-3m-3 3V11m2 0h-4m-7 0H4a2 2 0 00-2 2v5a2 2 0 002 2h6a2 2 0 002-2v-5a2 2 0 00-2-2z" />
+                </svg>
+                Batch Upload (Soon)
+            </a>
+            <a href="users.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Manajemen User
+            </a>
+            <a href="tokos.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 012-2H9a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                Manajemen Toko
+            </a>
+            <a href="zonas.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Manajemen Zona
+            </a>
+            <a href="trash.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Tong Sampah
+            </a>
+
+            <!-- Divider -->
+            <div class="pt-2 pb-1 px-4">
+                <div class="border-t border-white/5"></div>
+                <p class="text-[10px] text-gray-600 uppercase tracking-widest mt-3 mb-1">Tools</p>
+            </div>
+
+            <a href="ads-media.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all group">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Media Ads
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-white/5">
+            <div class="flex items-center gap-3">
+                <img data-user-avatar src="" alt="avatar" class="w-9 h-9 rounded-full ring-2 ring-indigo-500/30">
+                <div class="flex-1 min-w-0">
+                    <p data-user-name class="text-sm font-medium text-white truncate">Loading...</p>
+                    <span data-user-role class="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">-</span>
+                </div>
+                <button onclick="logout()" title="Logout"
+                    class="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content" class="ml-64 min-h-screen transition-all duration-300 relative">
+        <!-- Coming Soon Overlay (Sealed) -->
+        <div class="absolute inset-0 z-[60] flex items-center justify-center backdrop-blur-md bg-black/40">
+            <div class="glass p-12 rounded-3xl border border-white/20 text-center max-w-sm animate-scale-in shadow-2xl">
+                <div
+                    class="w-20 h-20 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-indigo-500/30">
+                    <svg class="w-10 h-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+                <h2 class="text-3xl font-bold text-white mb-4">Coming Soon</h2>
+                <p class="text-gray-400 mb-8 leading-relaxed text-sm">Fitur Batch Upload (Excel) sedang dalam tahap
+                    finalisasi dan akan segera aktif untuk Bapak gunakan. Mohon tunggu kabar selanjutnya ya Pak!</p>
+                <a href="dashboard.html" class="btn-primary block w-full py-3 rounded-xl font-medium">Kembali ke
+                    Dashboard</a>
+            </div>
+        </div>
+
+        <div class="header-locked opacity-20 pointer-events-none grayscale">
+            <header class="sticky top-0 z-30 backdrop-blur-xl bg-[#0f172a]/80 border-b border-white/5 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <button onclick="toggleSidebar()"
+                            class="lg:hidden p-2 rounded-lg text-gray-400 hover:bg-white/5">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                        <div>
+                            <h2 class="text-xl font-bold text-white">Batch Upload (Excel)</h2>
+                            <p class="text-xs text-gray-500">Unggah data POS dan lampirkan dokumen PDF secara masal</p>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="p-6 space-y-6">
+                <!-- Step 1: Upload Excel -->
+                <div id="excel-step"
+                    class="glass-card p-8 text-center border-2 border-dashed border-white/10 rounded-3xl transition-all hover:border-indigo-500/50 group">
+                    <input type="file" id="excel-input" accept=".xlsx, .xls, .csv" class="hidden"
+                        onchange="handleExcelUpload(event)">
+                    <label for="excel-input" class="cursor-pointer">
+                        <div
+                            class="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                            <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white mb-1">Pilih File Excel POS</h3>
+                        <p class="text-sm text-gray-400">Klik atau tarik file Excel laporan penjualan ke sini</p>
+                    </label>
+                </div>
+
+                <!-- Step 2: Preview & Map PDF -->
+                <div id="mapping-step" class="hidden space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span
+                                class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400 text-sm font-bold">2</span>
+                            <h3 class="text-lg font-semibold text-white">Lampirkan Berkas PDF</h3>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="resetBatch()" class="btn-ghost px-4 py-2 rounded-xl text-sm">Ganti File
+                                Excel</button>
+                            <button onclick="uploadAllReady()" id="btn-upload-all"
+                                class="btn-primary px-6 py-2 rounded-xl text-sm flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                                Upload Semua
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card overflow-hidden">
+                        <div class="excel-table-container">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="sticky top-0 bg-[#162036] shadow-sm z-10">
+                                    <tr>
+                                        <th class="px-5 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                            Status</th>
+                                        <th class="px-5 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                            Tanggal</th>
+                                        <th class="px-5 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                            No
+                                            Faktur</th>
+                                        <th class="px-5 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                            Konsumen/Toko</th>
+                                        <th class="px-5 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                            Total
+                                        </th>
+                                        <th class="px-5 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                            Metode</th>
+                                        <th class="px-5 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                            Aksi
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="batch-table-body" class="divide-y divide-white/5">
+                                    <!-- Data rows injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- Closed header-locked div -->
+    </main>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/batch-upload.js"></script>
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+    </script>
+</body>
+
+</html>

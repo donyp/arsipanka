@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bukti Pembayaran Piutang — Arsip Digital</title>
+    <meta name="description" content="Upload bukti pembayaran piutang secara massal">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="bg-[#0f172a] min-h-screen text-gray-200">
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
+
+            <!-- Sidebar -->
+    <aside id="sidebar"
+        class="sidebar fixed top-0 left-0 h-full w-64 bg-[#0c1222] border-r border-white/5 flex flex-col z-40">
+        <div class="p-5 border-b border-white/5">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-white">Arsip Digital</h1>
+                    <span class="text-xs text-gray-500">Multi-Zona System</span>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+            <a href="dashboard.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Dashboard
+            </a>
+            <a href="upload.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Upload Invoice Merah
+            </a>
+            <a href="piutang.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group active text-white bg-white/10 ring-1 ring-white/10 shadow-lg">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Bukti Pembayaran Piutang
+            </a>
+            <a href="javascript:void(0)" data-role="super_admin" onclick="Toast.info('Fitur ini akan segera hadir!')"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-500 opacity-60 cursor-not-allowed">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2a4 4 0 00-4-4H5m11 0h.01M13 18l3 3m0 0l3-3m-3 3V11m2 0h-4m-7 0H4a2 2 0 00-2 2v5a2 2 0 002 2h6a2 2 0 002-2v-5a2 2 0 00-2-2z" />
+                </svg>
+                Batch Upload (Soon)
+            </a>
+            <a href="users.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Manajemen User
+            </a>
+            <a href="tokos.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 012-2H9a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                Manajemen Toko
+            </a>
+            <a href="zonas.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Manajemen Zona
+            </a>
+            <a href="trash.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Tong Sampah
+            </a>
+
+            <!-- Divider -->
+            <div class="pt-2 pb-1 px-4">
+                <div class="border-t border-white/5"></div>
+                <p class="text-[10px] text-gray-600 uppercase tracking-widest mt-3 mb-1">Tools</p>
+            </div>
+
+            <a href="ads-media.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all group">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Media Ads
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-white/5">
+            <div class="flex items-center gap-3">
+                <img data-user-avatar src="" alt="avatar" class="w-9 h-9 rounded-full ring-2 ring-indigo-500/30">
+                <div class="flex-1 min-w-0">
+                    <p data-user-name class="text-sm font-medium text-white truncate">Loading...</p>
+                    <span data-user-role class="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">-</span>
+                </div>
+                <button onclick="logout()" title="Logout"
+                    class="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content" class="ml-64 min-h-screen transition-all duration-300">
+        <!-- Top Bar -->
+        <header class="sticky top-0 z-30 backdrop-blur-xl bg-[#0f172a]/80 border-b border-white/5 px-6 py-4">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg text-gray-400 hover:bg-white/5">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+                <div>
+                    <h2 class="text-lg font-semibold text-white">Bukti Pembayaran Piutang</h2>
+                    <p class="text-xs text-gray-500">Upload bukti pembayaran piutang secara massal</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-6">
+            <div class="max-w-3xl mx-auto space-y-6">
+
+                <!-- Info Banner -->
+                <div
+                    class="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 animate-fade-in-up">
+                    <svg class="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                        <p class="text-sm font-medium text-emerald-300">Upload Massal Bukti Piutang</p>
+                        <p class="text-xs text-emerald-400/70 mt-0.5">Pilih satu atau lebih file bukti pembayaran. File
+                            akan diupload ke folder piutang.</p>
+                    </div>
+                </div>
+
+                <!-- Upload Form Card -->
+                <div class="glass-card rounded-2xl p-6 animate-fade-in-up">
+                    <form id="piutang-form" class="space-y-5">
+
+                        <!-- Hidden category -->
+                        <input type="hidden" id="piutang-category" value="PIUTANG">
+
+                        <!-- Drag & Drop Zone -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">File Bukti Pembayaran</label>
+                            <div id="drop-zone" class="drop-zone rounded-2xl p-10 text-center cursor-pointer"
+                                onclick="document.getElementById('piutang-file-input').click()">
+                                <div id="drop-zone-content">
+                                    <svg class="w-12 h-12 mx-auto text-emerald-400/50 mb-3" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+                                    <p class="text-sm text-gray-400 mb-1">Drag & drop file di sini atau <span
+                                            class="text-emerald-400 font-medium">pilih file</span></p>
+                                    <p class="text-xs text-gray-600">PDF, JPG, PNG • Upload massal didukung • Maks 25MB
+                                        per file</p>
+                                </div>
+                                <div id="file-info" class="hidden text-left w-full max-w-lg mx-auto">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <p class="text-sm font-semibold text-white">File Terpilih:</p>
+                                        <button type="button" onclick="clearFiles(event)"
+                                            class="text-xs text-red-400 hover:text-red-300">Clear Semua</button>
+                                    </div>
+                                    <ul id="file-list-display" class="space-y-2 max-h-52 overflow-y-auto pr-2">
+                                        <!-- Files injected here -->
+                                    </ul>
+                                </div>
+                            </div>
+                            <input id="piutang-file-input" type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png"
+                                multiple onchange="handlePiutangFileSelect(this)">
+                        </div>
+
+                        <!-- Tanggal Row Only -->
+                        <div class="max-w-xs">
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Tanggal Pembayaran</label>
+                            <input id="piutang-date" type="date" required
+                                class="input-field w-full px-4 py-2.5 rounded-xl text-sm">
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div id="piutang-progress-container" class="hidden space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-gray-400">Mengupload...</span>
+                                <span id="piutang-progress-pct" class="text-xs font-medium text-emerald-400">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div id="piutang-progress-bar" class="progress-bar-fill bg-emerald-500"
+                                    style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button id="piutang-btn" type="submit"
+                            class="w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white transition-all shadow-lg shadow-emerald-500/20">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            Upload Bukti Piutang
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Recent Uploads -->
+                <div class="glass-card rounded-2xl p-6 animate-fade-in-up">
+                    <h3 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Upload Piutang Terbaru
+                    </h3>
+                    <div id="piutang-recent" class="space-y-2">
+                        <p class="text-sm text-gray-600 text-center py-6">Belum ada upload terbaru</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        let selectedPiutangFiles = [];
+        const DEFAULT_ZONA_ID = 1; // Zona 06b
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await initAuth('super_admin');
+            if (!user) return;
+
+            // Default date = today
+            const today = new Date();
+            const offset = today.getTimezoneOffset();
+            const localDate = new Date(today.getTime() - (offset * 60 * 1000));
+            const todayStr = localDate.toISOString().split('T')[0];
+            const dateInput = document.getElementById('piutang-date');
+            if (dateInput) dateInput.value = todayStr;
+
+            setupPiutangDragDrop();
+            setupPiutangForm();
+            loadRecentPiutang();
+        });
+
+
+
+        function setupPiutangDragDrop() {
+            const dropZone = document.getElementById('drop-zone');
+            if (!dropZone) return;
+
+            ['dragenter', 'dragover'].forEach(evt => {
+                dropZone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('border-emerald-500', 'bg-emerald-500/5');
+                });
+            });
+            ['dragleave', 'drop'].forEach(evt => {
+                dropZone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('border-emerald-500', 'bg-emerald-500/5');
+                });
+            });
+            dropZone.addEventListener('drop', (e) => {
+                addPiutangFiles(e.dataTransfer.files);
+            });
+        }
+
+        function handlePiutangFileSelect(input) {
+            if (input.files.length > 0) addPiutangFiles(input.files);
+        }
+
+        function addPiutangFiles(files) {
+            const newFiles = Array.from(files).filter(f => {
+                if (selectedPiutangFiles.some(sf => sf.file.name === f.name)) {
+                    Toast.warning(`"${f.name}" sudah ada dalam antrian.`);
+                    return false;
+                }
+                return true;
+            }).map(f => ({ file: f, toko: null }));
+
+            selectedPiutangFiles = [...selectedPiutangFiles, ...newFiles];
+            updatePiutangFileUI();
+        }
+
+        function removePiutangFile(index, e) {
+            e.stopPropagation();
+            selectedPiutangFiles.splice(index, 1);
+            updatePiutangFileUI();
+        }
+
+        function clearFiles(e) {
+            e.preventDefault();
+            selectedPiutangFiles = [];
+            updatePiutangFileUI();
+        }
+
+        function updatePiutangFileUI() {
+            const listDisplay = document.getElementById('file-list-display');
+            const fileInfo = document.getElementById('file-info');
+            const dropZoneContent = document.getElementById('drop-zone-content');
+            const submitBtn = document.getElementById('piutang-btn');
+
+            if (selectedPiutangFiles.length === 0) {
+                fileInfo.classList.add('hidden');
+                dropZoneContent.classList.remove('hidden');
+                if (submitBtn) submitBtn.disabled = true;
+                return;
+            }
+
+            fileInfo.classList.remove('hidden');
+            dropZoneContent.classList.add('hidden');
+            if (submitBtn) submitBtn.disabled = false;
+
+            listDisplay.innerHTML = selectedPiutangFiles.map((item, i) => `
+                <li class="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-7 h-7 rounded bg-emerald-500/10 flex items-center justify-center shrink-0">
+                            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        <div class="truncate">
+                            <p class="text-xs font-medium text-gray-300 truncate">${item.file.name}</p>
+                            <p class="text-[10px] text-gray-500">${formatPiutangSize(item.file.size)}</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="removePiutangFile(${i}, event)" class="p-1 text-gray-600 hover:text-red-400 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </li>
+            `).join('');
+        }
+
+        function formatPiutangSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+        }
+
+        function setupPiutangForm() {
+            const form = document.getElementById('piutang-form');
+            if (!form) return;
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                if (selectedPiutangFiles.length === 0) {
+                    Toast.warning('Pilih file terlebih dahulu.');
+                    return;
+                }
+
+                const tanggal = document.getElementById('piutang-date').value;
+                if (!tanggal) { Toast.warning('Isi tanggal pembayaran terlebih dahulu.'); return; }
+
+                const btn = document.getElementById('piutang-btn');
+                btn.disabled = true;
+                btn.innerHTML = '<div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div><span class="ml-2">Mengupload...</span>';
+
+                const progressContainer = document.getElementById('piutang-progress-container');
+                const progressPct = document.getElementById('piutang-progress-pct');
+                const progressBar = document.getElementById('piutang-progress-bar');
+                if (progressContainer) progressContainer.classList.remove('hidden');
+
+                const CONCURRENCY_LIMIT = 5;
+                let uploaded = 0;
+                const total = selectedPiutangFiles.length;
+
+                const uploadTask = async (item) => {
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', item.file);
+                        formData.append('zona_id', DEFAULT_ZONA_ID);
+                        formData.append('toko_id', ''); // General piutang upload
+                        formData.append('category', 'PIUTANG');
+                        formData.append('tanggal_dokumen', tanggal);
+                        formData.append('tanggal_upload', new Date().toISOString().split('T')[0]);
+
+                        await API.upload('/api/files/upload', formData);
+                        uploaded++;
+
+                        const pct = Math.round((uploaded / total) * 100);
+                        if (progressPct) progressPct.textContent = `${pct}%`;
+                        if (progressBar) progressBar.style.width = pct + '%';
+                    } catch (err) {
+                        Toast.error(`Gagal upload "${item.file.name}": ${err.message}`);
+                    }
+                };
+
+                // Concurrent upload in chunks
+                for (let i = 0; i < selectedPiutangFiles.length; i += CONCURRENCY_LIMIT) {
+                    const chunk = selectedPiutangFiles.slice(i, i + CONCURRENCY_LIMIT);
+                    await Promise.all(chunk.map(item => uploadTask(item)));
+                }
+
+                Toast.success(`${uploaded}/${total} file berhasil diupload!`);
+
+                selectedPiutangFiles = [];
+                updatePiutangFileUI();
+                if (progressContainer) progressContainer.classList.add('hidden');
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Upload Bukti Piutang
+                `;
+                loadRecentPiutang();
+            });
+        }
+
+        async function loadRecentPiutang() {
+            const container = document.getElementById('piutang-recent');
+            if (!container) return;
+            try {
+                const { files } = await API.get('/api/files');
+                const piutangFiles = (files || []).filter(f => f.category === 'PIUTANG').slice(0, 5);
+
+                if (piutangFiles.length === 0) {
+                    container.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">Belum ada upload piutang</p>';
+                    return;
+                }
+                container.innerHTML = piutangFiles.map(f => `
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-300">${truncate(f.nama_file, 35)}</p>
+                                <p class="text-xs text-gray-500">${f.zonas?.nama || ''} • ${new Date(f.created_at).toLocaleDateString('id-ID')}</p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-400">Piutang</span>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = '<p class="text-sm text-red-400 text-center py-4">Gagal memuat data.</p>';
+            }
+        }
+    </script>
+
+</body>
+
+</html>

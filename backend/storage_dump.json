@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1,
+    "mount_path": "/terabox",
+    "order": 0,
+    "driver": "Terabox",
+    "cache_expiration": 30,
+    "status": "work",
+    "addition": "{\"root_folder_path\":\"/\",\"cookie\":\"ndus=Y4piXBPpeHuigyUmpSoRf1ZUwOP1po25lMqXjF4d\",\"download_api\":\"crack\",\"order_by\":\"name\",\"order_direction\":\"asc\"}",
+    "remark": "",
+    "modified": "2026-04-20 11:05:53.6903147+07:00",
+    "disabled": 0,
+    "disable_index": 0,
+    "enable_sign": 0,
+    "order_by": "",
+    "order_direction": "",
+    "extract_folder": "",
+    "web_proxy": 1,
+    "webdav_policy": "native_proxy",
+    "proxy_range": 0,
+    "down_proxy_url": "",
+    "down_proxy_sign": 1
+  }
+]

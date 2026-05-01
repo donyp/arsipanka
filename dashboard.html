@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Arsip Digital</title>
+    <meta name="description" content="Dashboard Sistem Arsip Digital Multi-Zona">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="bg-[#0f172a] min-h-screen text-gray-200">
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
+
+            <!-- Sidebar -->
+    <aside id="sidebar"
+        class="sidebar fixed top-0 left-0 h-full w-64 bg-[#0c1222] border-r border-white/5 flex flex-col z-40">
+        <div class="p-5 border-b border-white/5">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-white">Arsip Digital</h1>
+                    <span class="text-xs text-gray-500">Multi-Zona System</span>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+            <a href="dashboard.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group active text-white bg-white/10 ring-1 ring-white/10 shadow-lg">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Dashboard
+            </a>
+            <a href="upload.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Upload Invoice Merah
+            </a>
+            <a href="piutang.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Bukti Pembayaran Piutang
+            </a>
+            <a href="javascript:void(0)" data-role="super_admin" onclick="Toast.info('Fitur ini akan segera hadir!')"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-500 opacity-60 cursor-not-allowed">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2a4 4 0 00-4-4H5m11 0h.01M13 18l3 3m0 0l3-3m-3 3V11m2 0h-4m-7 0H4a2 2 0 00-2 2v5a2 2 0 002 2h6a2 2 0 002-2v-5a2 2 0 00-2-2z" />
+                </svg>
+                Batch Upload (Soon)
+            </a>
+            <a href="users.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Manajemen User
+            </a>
+            <a href="tokos.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 012-2H9a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                Manajemen Toko
+            </a>
+            <a href="zonas.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Manajemen Zona
+            </a>
+            <a href="trash.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Tong Sampah
+            </a>
+
+            <!-- Divider -->
+            <div class="pt-2 pb-1 px-4">
+                <div class="border-t border-white/5"></div>
+                <p class="text-[10px] text-gray-600 uppercase tracking-widest mt-3 mb-1">Tools</p>
+            </div>
+
+            <a href="ads-media.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all group">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Media Ads
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-white/5">
+            <div class="flex items-center gap-3">
+                <img data-user-avatar src="" alt="avatar" class="w-9 h-9 rounded-full ring-2 ring-indigo-500/30">
+                <div class="flex-1 min-w-0">
+                    <p data-user-name class="text-sm font-medium text-white truncate">Loading...</p>
+                    <span data-user-role class="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">-</span>
+                </div>
+                <button onclick="logout()" title="Logout"
+                    class="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content" class="ml-64 min-h-screen transition-all duration-300">
+        <!-- Top Bar -->
+        <header class="sticky top-0 z-30 backdrop-blur-xl bg-[#0f172a]/80 border-b border-white/5 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <!-- Mobile Menu Button -->
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg text-gray-400 hover:bg-white/5">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                    <div>
+                        <h2 class="text-lg font-semibold text-white">Dashboard</h2>
+                        <p class="text-xs text-gray-500"><span data-user-zona>-</span> • <span id="current-date"></span>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <!-- Search Bar -->
+                    <div class="relative hidden md:block">
+                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input id="search-input" type="text" placeholder="Cari dokumen..."
+                            class="input-field pl-10 pr-4 py-2 rounded-xl text-sm w-72">
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Broadcast Marquee (Modernized) -->
+        <div id="broadcast-container"
+            class="hidden bg-gradient-to-r from-indigo-900/40 via-indigo-600/10 to-transparent border-b border-white/5 py-2.5 px-6 overflow-hidden backdrop-blur-md">
+            <div class="flex items-center gap-4">
+                <div
+                    class="flex-shrink-0 flex items-center px-2.5 py-1 rounded-full text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-widest shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+                    Pengumuman</div>
+                <marquee id="broadcast-marquee" class="text-[13px] text-indigo-100/90 font-medium tracking-wide">
+                </marquee>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <!-- Super Admin Controls (Broadcast) -->
+            <div data-role="super_admin" class="glass-card rounded-2xl p-4 border-l-4 border-indigo-500 hidden"
+                id="admin-controls">
+                <div class="flex flex-col md:flex-row items-end gap-4">
+                    <div class="flex-1 w-full text-left">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Siarkan Pesan Ke Admin Zona</label>
+                        <input id="broadcast-input" type="text" placeholder="Ketik pesan pengumuman di sini..."
+                            class="input-field w-full px-4 py-2 rounded-xl text-sm">
+                    </div>
+                    <div class="w-full md:w-48 text-left">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Target Zona</label>
+                        <select id="broadcast-zona" class="input-field w-full px-3 py-2 rounded-xl text-sm">
+                            <option value="">Semua Zona</option>
+                            <!-- Zonas populated via JS -->
+                        </select>
+                    </div>
+                    <button onclick="sendBroadcast()"
+                        class="btn-primary h-[38px] px-6 rounded-xl text-sm font-semibold flex items-center gap-2 whitespace-nowrap">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.167H3.35a1.1 1.1 0 01-1.1-1.1v-3.13a1.1 1.1 0 011.1-1.1h2.086l2.147-6.167A1.76 1.76 0 0111 5.882zM18 8l3 3m0 0l-3 3m3-3h-9" />
+                        </svg>
+                        Kirim
+                    </button>
+                    <button onclick="openManageBroadcasts()"
+                        class="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all border border-white/5"
+                        title="Kelola Pengumuman">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924-1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4" id="stats-grid" data-role="super_admin">
+                <div class="stat-card glass-card rounded-2xl p-5 animate-fade-in-up stagger-1">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <span class="text-xs text-gray-500 font-medium">Invoice Merah</span>
+                    </div>
+                    <p id="stat-invoice" class="text-2xl font-bold text-white">0</p>
+                    <p class="text-xs text-gray-500 mt-1">Dokumen</p>
+                </div>
+                <div class="stat-card glass-card rounded-2xl p-5 animate-fade-in-up stagger-2" data-role="super_admin">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-10 h-10 rounded-xl bg-purple-500/15 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <span class="text-xs text-gray-500 font-medium">Piutang</span>
+                    </div>
+                    <p id="stat-piutang" class="text-2xl font-bold text-white">0</p>
+                    <p class="text-xs text-gray-500 mt-1">Dokumen</p>
+                </div>
+                <div class="stat-card glass-card rounded-2xl p-5 animate-fade-in-up stagger-3" data-role="super_admin">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                        </div>
+                        <span class="text-xs text-gray-500 font-medium">Beban Kapasitas</span>
+                    </div>
+                    <p id="stat-storage" class="text-xl font-bold text-white">0 / 0 GB</p>
+                    <div class="w-full bg-white/5 rounded-full h-1.5 mt-3">
+                        <div id="stat-storage-progress"
+                            class="bg-emerald-500 h-1.5 rounded-full transition-all duration-1000" style="width: 0%">
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card glass-card rounded-2xl p-5 animate-fade-in-up stagger-4" data-role="super_admin">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-10 h-10 rounded-xl bg-sky-500/15 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            </svg>
+                        </div>
+                        <span class="text-xs text-gray-500 font-medium">Terpakai Hari Ini</span>
+                    </div>
+                    <p id="stat-storage-today" class="text-xl font-bold text-white">0 MB</p>
+                    <p class="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">Real-time Metrics</p>
+                </div>
+            </div>
+
+            <!-- Mobile Search -->
+            <div class="md:hidden">
+                <div class="relative">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input id="search-input-mobile" type="text" placeholder="Cari dokumen..."
+                        class="input-field w-full pl-10 pr-4 py-2.5 rounded-xl text-sm">
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="glass-card rounded-2xl p-4">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div class="flex items-center gap-2 text-sm text-gray-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        <span class="font-medium">Filter</span>
+                    </div>
+                    <div class="flex flex-1 flex-wrap gap-3 w-full">
+                        <select id="filter-category"
+                            class="input-field px-3 py-2 rounded-xl text-sm flex-1 min-w-[140px]">
+                            <option value="" data-role="super_admin">Semua Kategori</option>
+                            <option value="INVOICE">Invoice Merah</option>
+                            <option value="PIUTANG" data-role="super_admin">Bukti Pembayaran Piutang</option>
+                        </select>
+                        <select id="filter-tipe" class="input-field px-3 py-2 rounded-xl text-sm flex-1 min-w-[140px]">
+                            <option value="">Tipe</option>
+                            <option value="PPN">PPN</option>
+                            <option value="NON">NON</option>
+                        </select>
+                        <select id="filter-zona" class="input-field px-3 py-2 rounded-xl text-sm flex-1 min-w-[140px]"
+                            data-role="super_admin">
+                            <option value="">Semua Zona</option>
+                        </select>
+                        <select id="filter-toko" class="input-field px-3 py-2 rounded-xl text-sm flex-1 min-w-[140px]">
+                            <option value="">Semua Toko</option>
+                        </select>
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <input id="filter-date-start" type="date" title="Dari Tanggal"
+                                class="input-field px-3 py-2 rounded-xl text-sm w-full sm:w-auto">
+                            <span class="text-gray-500 text-sm">-</span>
+                            <input id="filter-date-end" type="date" title="Sampai Tanggal"
+                                class="input-field px-3 py-2 rounded-xl text-sm w-full sm:w-auto">
+                        </div>
+                        <div class="flex flex-1 sm:flex-none justify-end gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                            <button onclick="resetFilters()"
+                                class="btn-ghost px-3 py-2 rounded-xl text-sm flex-shrink-0" title="Reset Filters">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            </button>
+                            <button onclick="exportCSV()"
+                                class="btn-ghost px-3 py-2 rounded-xl text-sm text-emerald-400 hover:text-emerald-300 flex-shrink-0"
+                                title="Export ke CSV">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                            </button>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Archive Table -->
+            <div class="glass-card rounded-2xl overflow-hidden flex flex-col" style="max-height: 65vh;">
+                <div class="overflow-y-auto overflow-x-auto flex-1 h-full scrollbar-thin"
+                    style="scroll-behavior: smooth; overscroll-behavior-y: contain; transform: translateZ(0);">
+                    <table class="data-table" id="archive-table">
+                        <thead>
+                            <tr>
+                                <th class="w-10">
+                                    <input type="checkbox" id="select-all" class="custom-checkbox"
+                                        onclick="toggleSelectAll(this)">
+                                </th>
+                                <th>Nama File</th>
+                                <th>Kategori</th>
+                                <th>Tipe</th>
+                                <th>Zona</th>
+                                <th>Toko</th>
+                                <th>Tanggal Dokumen</th>
+                                <th>Upload</th>
+                                <th class="text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="archive-body">
+                            <!-- Rows will be rendered by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="empty-state hidden">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                    <p class="text-lg font-medium text-gray-400 mb-1">Belum ada arsip</p>
+                    <p class="text-sm text-gray-600">Data arsip akan muncul di sini setelah diupload.</p>
+                </div>
+
+                <!-- Pagination -->
+                <div id="pagination" class="flex items-center justify-between px-6 py-4 border-t border-white/5">
+                    <p class="text-xs text-gray-500">
+                        Menampilkan <span id="showing-range">0-0</span> dari <span id="total-count">0</span> arsip
+                    </p>
+                    <div class="flex gap-2">
+                        <button id="prev-btn" onclick="prevPage()" disabled
+                            class="btn-ghost px-3 py-1.5 rounded-lg text-xs disabled:opacity-30 disabled:cursor-not-allowed">
+                            ← Prev
+                        </button>
+                        <button id="next-btn" onclick="nextPage()" disabled
+                            class="btn-ghost px-3 py-1.5 rounded-lg text-xs disabled:opacity-30 disabled:cursor-not-allowed">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bulk Action Bar -->
+    <div id="bulk-action-bar" class="bulk-floating-bar">
+        <div class="bulk-inner">
+            <div class="flex items-center gap-2 pr-4 border-r border-white/10">
+                <div class="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs font-bold"
+                    id="selected-count">0</div>
+                <span class="text-sm font-medium text-gray-300">Berkas</span>
+            </div>
+            <div class="flex items-center gap-3 pl-1">
+                <button id="btn-bulk-download" onclick="downloadSelected()"
+                    class="btn-primary px-5 py-2 rounded-xl text-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <span id="bulk-download-text">Download</span>
+                </button>
+                <button onclick="clearSelection()" class="btn-ghost px-4 py-2 rounded-xl text-sm">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Broadcast Management Modal -->
+    <div id="broadcast-manage-modal" class="fixed inset-0 z-[60] hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeBroadcastManage()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl px-4">
+            <div class="glass-card rounded-3xl overflow-hidden shadow-2xl border border-white/10 animate-modal-in">
+                <div class="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Kelola Pengumuman</h3>
+                        <p class="text-xs text-gray-500 mt-1">Daftar pesan broadcast yang telah Anda siarkan.</p>
+                    </div>
+                    <button onclick="closeBroadcastManage()"
+                        class="p-2 rounded-xl hover:bg-white/10 text-gray-400 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="max-h-[60vh] overflow-y-auto p-4 space-y-3 custom-scrollbar" id="broadcast-list">
+                    <!-- List items via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Preview Modal -->
+    <div id="preview-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm preview-modal" onclick="closePreview()"></div>
+        <div class="absolute inset-4 md:inset-8 lg:inset-16 flex flex-col preview-modal-content">
+            <div
+                class="flex items-center justify-between bg-gray-900 rounded-t-2xl px-5 py-3 border border-white/10 border-b-0">
+                <h3 id="preview-title" class="text-sm font-medium text-white truncate">Preview</h3>
+                <div class="flex items-center gap-2">
+                    <a id="preview-download" href="#" target="_blank"
+                        class="btn-ghost px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download
+                    </a>
+                    <button onclick="closePreview()"
+                        class="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 bg-gray-950 rounded-b-2xl border border-white/10 border-t-0 overflow-hidden">
+                <iframe id="preview-iframe" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script>
+        // Sidebar toggle for mobile
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Toko — Arsip Digital</title>
+    <meta name="description" content="Kelola daftar toko dan klasifikasi zona">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="bg-[#0f172a] min-h-screen text-gray-200">
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
+
+            <!-- Sidebar -->
+    <aside id="sidebar"
+        class="sidebar fixed top-0 left-0 h-full w-64 bg-[#0c1222] border-r border-white/5 flex flex-col z-40">
+        <div class="p-5 border-b border-white/5">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-white">Arsip Digital</h1>
+                    <span class="text-xs text-gray-500">Multi-Zona System</span>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+            <a href="dashboard.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Dashboard
+            </a>
+            <a href="upload.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Upload Invoice Merah
+            </a>
+            <a href="piutang.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Bukti Pembayaran Piutang
+            </a>
+            <a href="javascript:void(0)" data-role="super_admin" onclick="Toast.info('Fitur ini akan segera hadir!')"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-500 opacity-60 cursor-not-allowed">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2a4 4 0 00-4-4H5m11 0h.01M13 18l3 3m0 0l3-3m-3 3V11m2 0h-4m-7 0H4a2 2 0 00-2 2v5a2 2 0 002 2h6a2 2 0 002-2v-5a2 2 0 00-2-2z" />
+                </svg>
+                Batch Upload (Soon)
+            </a>
+            <a href="users.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Manajemen User
+            </a>
+            <a href="tokos.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group active text-white bg-white/10 ring-1 ring-white/10 shadow-lg">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 012-2H9a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                Manajemen Toko
+            </a>
+            <a href="zonas.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Manajemen Zona
+            </a>
+            <a href="trash.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Tong Sampah
+            </a>
+
+            <!-- Divider -->
+            <div class="pt-2 pb-1 px-4">
+                <div class="border-t border-white/5"></div>
+                <p class="text-[10px] text-gray-600 uppercase tracking-widest mt-3 mb-1">Tools</p>
+            </div>
+
+            <a href="ads-media.html" data-role="super_admin"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all group">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Media Ads
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-white/5">
+            <div class="flex items-center gap-3">
+                <img data-user-avatar src="" alt="avatar" class="w-9 h-9 rounded-full ring-2 ring-indigo-500/30">
+                <div class="flex-1 min-w-0">
+                    <p data-user-name class="text-sm font-medium text-white truncate">Loading...</p>
+                    <span data-user-role class="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">-</span>
+                </div>
+                <button onclick="logout()" title="Logout"
+                    class="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content" class="ml-64 min-h-screen transition-all duration-300">
+        <!-- Top Bar -->
+        <header class="sticky top-0 z-30 backdrop-blur-xl bg-[#0f172a]/80 border-b border-white/5 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg text-gray-400 hover:bg-white/5">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                    <div>
+                        <h2 class="text-lg font-semibold text-white">Manajemen Toko</h2>
+                        <p class="text-xs text-gray-500">Kelola daftar toko dan alokasi zona</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <select id="filter-zona" onchange="applyTokoFilter()"
+                        class="input-field px-4 py-2 rounded-xl text-sm bg-[#0c1222]/50 border-white/10 text-gray-400 min-w-[140px]">
+                        <option value="">Semua Zona</option>
+                    </select>
+                    <button onclick="openTokoModal()"
+                        class="btn-primary px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg shadow-indigo-500/20">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Tambah Toko
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-6">
+            <!-- Stats -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <div class="glass-card rounded-2xl p-5">
+                    <p class="text-xs text-gray-500 mb-1">Total Toko</p>
+                    <p id="stat-total-tokos" class="text-2xl font-bold text-white">0</p>
+                </div>
+                <div class="glass-card rounded-2xl p-5">
+                    <p class="text-xs text-gray-500 mb-1">Cakupan Zona</p>
+                    <p id="stat-total-zonas" class="text-2xl font-bold text-cyan-400">0</p>
+                </div>
+            </div>
+
+            <!-- List Content -->
+            <div class="glass-card rounded-2xl overflow-hidden animate-fade-in text-sm">
+                <div class="overflow-x-auto">
+                    <table class="data-table" id="tokos-table">
+                        <thead>
+                            <tr>
+                                <th>Nama Toko</th>
+                                <th>Kode Toko</th>
+                                <th>Zona</th>
+                                <th class="text-right px-6">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tokos-body">
+                            <!-- Rows rendered by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="tokos-empty" class="empty-state hidden">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                            d="M19 21V5a2 2 0 012-2H9a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <p class="text-lg font-medium text-gray-400 mb-1">Daftar toko kosong</p>
+                    <p class="text-sm text-gray-600">Tekan "Tambah Toko" untuk memulai.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add/Edit Toko Modal -->
+    <div id="toko-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeTokoModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div
+                class="relative bg-gray-900/95 border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-scale-in">
+                <h3 id="modal-title" class="text-lg font-semibold text-white mb-5">Tambah Toko Baru</h3>
+                <form id="toko-form" class="space-y-4">
+                    <input type="hidden" id="edit-toko-id">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-1.5">Nama Toko</label>
+                        <input id="modal-nama" type="text" required placeholder="Contoh: Toko Berkah"
+                            class="input-field w-full px-4 py-2.5 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-1.5">Kode Toko</label>
+                        <input id="modal-kode" type="text" required placeholder="Contoh: TRK-01"
+                            class="input-field w-full px-4 py-2.5 rounded-xl text-sm uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-1.5">Alokasi Zona</label>
+                        <select id="modal-zona" required class="input-field w-full px-4 py-2.5 rounded-xl text-sm">
+                            <option value="">Pilih zona</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button type="button" onclick="closeTokoModal()"
+                            class="btn-ghost flex-1 py-2.5 rounded-xl text-sm font-medium">Batal</button>
+                        <button type="submit"
+                            class="btn-primary flex-1 py-2.5 rounded-xl text-sm font-medium">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/tokos.js"></script>
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+    </script>
+</body>
+
+</html>
