@@ -129,10 +129,21 @@ const RcloneStorage = {
 
             if (!createdDirsCache.has(parentFolderPath)) {
                 console.log(`[Upload] Ensuring directory exists: ${parentFolderPath}`);
-                // rclone mkdir handles recursive creation natively and is extremely robust.
-                // With globalUploadMutex, we are safe from concurrent 409 Conflicts.
-                await rcloneExec(['mkdir', `${PRIMARY_REMOTE}:${parentFolderPath}`]);
-                createdDirsCache.add(parentFolderPath);
+                try {
+                    // rclone mkdir handles recursive creation natively and is extremely robust.
+                    // With globalUploadMutex, we are safe from concurrent 409 Conflicts.
+                    await rcloneExec(['mkdir', `${PRIMARY_REMOTE}:${parentFolderPath}`]);
+                    createdDirsCache.add(parentFolderPath);
+                } catch (err) {
+                    // If error is 409 Conflict, it usually means the folder already exists or is being synced.
+                    // We can proceed to 'put' the file regardless.
+                    if (err.message.includes('409 Conflict')) {
+                        console.warn(`[Upload] Directory conflict (409) for ${parentFolderPath}, continuing...`);
+                        createdDirsCache.add(parentFolderPath);
+                    } else {
+                        throw err;
+                    }
+                }
             }
 
             // 2. Put File directly via Alist API
@@ -201,8 +212,17 @@ const RcloneStorage = {
 
             if (!createdDirsCache.has(parentFolderPath)) {
                 console.log(`[Upload] Ensuring Media directory exists: ${parentFolderPath}`);
-                await rcloneExec(['mkdir', `${PRIMARY_REMOTE}:${parentFolderPath}`]);
-                createdDirsCache.add(parentFolderPath);
+                try {
+                    await rcloneExec(['mkdir', `${PRIMARY_REMOTE}:${parentFolderPath}`]);
+                    createdDirsCache.add(parentFolderPath);
+                } catch (err) {
+                    if (err.message.includes('409 Conflict')) {
+                        console.warn(`[Upload Media] Directory conflict (409) for ${parentFolderPath}, continuing...`);
+                        createdDirsCache.add(parentFolderPath);
+                    } else {
+                        throw err;
+                    }
+                }
             }
 
             // 2. Put File directly
