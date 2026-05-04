@@ -38,15 +38,15 @@ const PRIMARY_REMOTE = process.env.RCLONE_PRIMARY_REMOTE || 'terabox';
 const BACKUP_REMOTE = process.env.RCLONE_BACKUP_REMOTE || 'storj';
 const BASE_PATH = process.env.RCLONE_BASE_PATH || '/arsip';
 
+const isWindows = process.platform === 'win32';
+const rclonePath = isWindows ? path.resolve(__dirname, '..', 'rclone.exe') : 'rclone';
+const configPath = process.env.RCLONE_CONFIG || path.resolve(__dirname, '..', 'rclone.conf');
+
 /**
  * Execute an rclone command and return a promise.
  */
 function rcloneExec(args) {
     return new Promise((resolve, reject) => {
-        // Linux standard binary 'rclone' (installed via apt) or local binary
-        const isWindows = process.platform === 'win32';
-        const rclonePath = isWindows ? path.join(__dirname, '..', 'rclone.exe') : 'rclone';
-        const configPath = process.env.RCLONE_CONFIG || path.join(__dirname, '..', 'rclone.conf');
         const finalArgs = ['--config', configPath, ...args];
 
         execFile(rclonePath, finalArgs, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
@@ -60,9 +60,6 @@ function rcloneExec(args) {
 }
 
 function rcloneSpawn(args) {
-    const isWindows = process.platform === 'win32';
-    const rclonePath = isWindows ? path.join(__dirname, '..', 'rclone.exe') : 'rclone';
-    const configPath = process.env.RCLONE_CONFIG || path.join(__dirname, '..', 'rclone.conf');
     const finalArgs = ['--config', configPath, ...args];
     const logMsg = `[Rclone Spawn] ${rclonePath} ${finalArgs.join(' ')}\n`;
     const logPath = path.join(__dirname, 'debug_rclone_spawn.log');
@@ -130,15 +127,31 @@ const RcloneStorage = {
             if (!createdDirsCache.has(parentFolderPath)) {
                 console.log(`[Upload] Ensuring directory exists: ${parentFolderPath}`);
                 try {
-                    // rclone mkdir handles recursive creation natively and is extremely robust.
-                    // With globalUploadMutex, we are safe from concurrent 409 Conflicts.
+                    console.log(`[Upload] Running rclone mkdir for: ${parentFolderPath}`);
                     await rcloneExec(['mkdir', `${PRIMARY_REMOTE}:${parentFolderPath}`]);
+
+                    // Recursive Alist Refresh: Force Alist to sync each path segment from Terabox
+                    console.log(`[Upload] Forcing Alist cache refresh for path: ${parentFolderPath}`);
+                    const segments = parentFolderPath.split('/').filter(Boolean);
+                    let currentSyncPath = '';
+                    for (const segment of segments) {
+                        currentSyncPath += '/' + segment;
+                        // Skip refreshing the root /arsip if it's already highly stable
+                        if (currentSyncPath === BASE_PATH) continue;
+
+                        await fetch(`${alistDomain}/api/fs/list`, {
+                            method: 'POST',
+                            headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ path: '/terabox' + currentSyncPath, refresh: true, page: 1, per_page: 1 })
+                        }).then(r => r.json()).catch(e => console.warn(`[Sync] Refresh failed for ${currentSyncPath}:`, e.message));
+                    }
+
                     createdDirsCache.add(parentFolderPath);
                 } catch (err) {
-                    // If error is 409 Conflict, it usually means the folder already exists or is being synced.
-                    // We can proceed to 'put' the file regardless.
-                    if (err.message.includes('409 Conflict')) {
-                        console.warn(`[Upload] Directory conflict (409) for ${parentFolderPath}, continuing...`);
+                    const errMsg = err.message || '';
+                    console.warn(`[Upload] rclone mkdir returned an error: ${errMsg}`);
+                    if (errMsg.toLowerCase().includes('409') || errMsg.toLowerCase().includes('conflict')) {
+                        console.log(`[Upload] Detected 409/Conflict for ${parentFolderPath}, treating as existing directory.`);
                         createdDirsCache.add(parentFolderPath);
                     } else {
                         throw err;
@@ -163,9 +176,6 @@ const RcloneStorage = {
             // Backup to Storj (fire and forget via rcat)
             const backupDest = `${BACKUP_REMOTE}:${storagePath}`;
             const backupPromise = new Promise((resolve, reject) => {
-                const isWindows = process.platform === 'win32';
-                const rclonePath = isWindows ? path.join(__dirname, '..', 'rclone.exe') : 'rclone';
-                const configPath = process.env.RCLONE_CONFIG || path.join(__dirname, '..', 'rclone.conf');
                 const child = spawn(rclonePath, ['--config', configPath, 'rcat', backupDest]);
                 child.on('close', (code) => code === 0 ? resolve() : reject(new Error('Backup rcat failed')));
                 child.on('error', reject);
@@ -213,11 +223,14 @@ const RcloneStorage = {
             if (!createdDirsCache.has(parentFolderPath)) {
                 console.log(`[Upload] Ensuring Media directory exists: ${parentFolderPath}`);
                 try {
+                    console.log(`[Upload Media] Running rclone mkdir for: ${parentFolderPath}`);
                     await rcloneExec(['mkdir', `${PRIMARY_REMOTE}:${parentFolderPath}`]);
                     createdDirsCache.add(parentFolderPath);
                 } catch (err) {
-                    if (err.message.includes('409 Conflict')) {
-                        console.warn(`[Upload Media] Directory conflict (409) for ${parentFolderPath}, continuing...`);
+                    const errMsg = err.message || '';
+                    console.warn(`[Upload Media] rclone mkdir error: ${errMsg}`);
+                    if (errMsg.toLowerCase().includes('409') || errMsg.toLowerCase().includes('conflict')) {
+                        console.log(`[Upload Media] Detected 409/Conflict for ${parentFolderPath}, continuing...`);
                         createdDirsCache.add(parentFolderPath);
                     } else {
                         throw err;
@@ -242,9 +255,6 @@ const RcloneStorage = {
             // Backup (fire and forget via rcat)
             const backupDest = `${BACKUP_REMOTE}:${storagePath}`;
             const backupPromise = new Promise((resolve, reject) => {
-                const isWindows = process.platform === 'win32';
-                const rclonePath = isWindows ? path.join(__dirname, '..', 'rclone.exe') : 'rclone';
-                const configPath = process.env.RCLONE_CONFIG || path.join(__dirname, '..', 'rclone.conf');
                 const child = spawn(rclonePath, ['--config', configPath, 'rcat', backupDest]);
                 child.on('close', (code) => code === 0 ? resolve() : reject(new Error('Backup rcat failed')));
                 child.on('error', reject);
