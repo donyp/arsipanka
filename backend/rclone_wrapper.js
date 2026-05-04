@@ -101,8 +101,12 @@ const RcloneStorage = {
 
         try {
             console.log(`[Rclone] Uploading ${originalName} to ${primaryDest}...`);
-            // Upload to primary (Terabox)
-            await rcloneExec(['copyto', tmpPath, primaryDest]);
+            // Pre-create parent directory to avoid WebDAV 409 Conflicts
+            const parentDir = PRIMARY_REMOTE + ':' + storagePath.substring(0, storagePath.lastIndexOf('/'));
+            try { await rcloneExec(['mkdir', parentDir]); } catch (_) { }
+
+            // Upload to primary (Terabox) with retries
+            await rcloneExec(['copyto', tmpPath, primaryDest, '--retries', '5', '--retries-sleep', '2s']);
             console.log(`[Rclone] Upload check success for: ${originalName}`);
 
             // Upload to backup (Storj) — fire and forget
@@ -180,7 +184,7 @@ const RcloneStorage = {
         const primaryDest = `${PRIMARY_REMOTE}:/ads-media/${category}/`;
 
         try {
-            await rcloneExec(['copy', tmpPath, primaryDest, '--no-traverse']);
+            await rcloneExec(['copy', tmpPath, primaryDest, '--no-traverse', '--retries', '5', '--retries-sleep', '2s']);
             console.log(`[Rclone] Media uploaded: ${storagePath}`);
 
             // Backup (fire and forget)
