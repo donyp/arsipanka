@@ -127,6 +127,10 @@ const waTimeouts = {}; // { [zonaId]: timeoutRef }
  * Aggregates messages for 2 seconds before sending a summary.
  */
 function sendWANotification(zonaId, details) {
+    // Disabled permanently in code per user request
+    console.log('[WA] System is currently disabled in code.');
+    return;
+
     if (process.env.DISABLE_WA_NOTIFICATIONS === 'true') {
         console.log('[WA] Notifications are disabled.');
         return;
