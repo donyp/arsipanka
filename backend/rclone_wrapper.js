@@ -90,28 +90,27 @@ const RcloneStorage = {
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
-        // Use a safe temp filename to avoid Windows path issues with emojis/special chars
-        const safeTmpName = `up_${Date.now()}_${Math.random().toString(36).substring(7)}.tmp`;
-        const tmpPath = path.join(tmpDir, safeTmpName);
+        // Rename temp file to actual filename so rclone 'copy' uses it as-is
+        const safeFileName = originalName.replace(/[<>:"/\\|?*]/g, '_');
+        const tmpPath = path.join(tmpDir, safeFileName);
         fs.writeFileSync(tmpPath, fileBuffer);
 
         const storagePath = `${BASE_PATH}/${zonaKode}/${tokoKode}/${category}/${originalName}`;
-        // Important: use copyto to set the destination filename correctly even if local name is different
-        const primaryDest = PRIMARY_REMOTE + ':' + storagePath;
+        // Use parent directory as dest for 'copy' (avoids mkParentDir conflict)
+        const parentDir = `${PRIMARY_REMOTE}:${BASE_PATH}/${zonaKode}/${tokoKode}/${category}/`;
 
         try {
-            console.log(`[Rclone] Uploading ${originalName} to ${primaryDest}...`);
-            // Pre-create parent directory to avoid WebDAV 409 Conflicts
-            const parentDir = PRIMARY_REMOTE + ':' + storagePath.substring(0, storagePath.lastIndexOf('/'));
+            console.log(`[Rclone] Uploading ${originalName} to ${parentDir}...`);
+            // Pre-create parent directory
             try { await rcloneExec(['mkdir', parentDir]); } catch (_) { }
 
-            // Upload to primary (Terabox) with retries
-            await rcloneExec(['copyto', tmpPath, primaryDest, '--retries', '5', '--retries-sleep', '2s']);
-            console.log(`[Rclone] Upload check success for: ${originalName}`);
+            // Use 'copy' instead of 'copyto' to avoid WebDAV mkParentDir 409 Conflict
+            await rcloneExec(['copy', tmpPath, parentDir, '--no-check-dest', '--retries', '5', '--retries-sleep', '2s']);
+            console.log(`[Rclone] Upload success for: ${originalName}`);
 
             // Upload to backup (Storj) — fire and forget
-            const backupDest = BACKUP_REMOTE + ':' + storagePath;
-            rcloneExec(['copyto', tmpPath, backupDest]).then(() => {
+            const backupDir = `${BACKUP_REMOTE}:${BASE_PATH}/${zonaKode}/${tokoKode}/${category}/`;
+            rcloneExec(['copy', tmpPath, backupDir, '--no-check-dest']).then(() => {
                 console.log(`[Rclone] Backup to storj complete.`);
             }).catch(err => {
                 console.warn(`[Rclone] Backup failed (non-critical):`, err.message);
