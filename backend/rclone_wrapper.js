@@ -87,42 +87,58 @@ const RcloneStorage = {
      * @returns {object} { storagePath, size }
      */
     async upload(fileBuffer, originalName, zonaKode, tokoKode, category) {
-        const tmpDir = path.join(__dirname, 'tmp');
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-
-        // Rename temp file to actual filename so rclone 'copy' uses it as-is
-        const safeFileName = originalName.replace(/[<>:"/\\|?*]/g, '_');
-        const tmpPath = path.join(tmpDir, safeFileName);
-        fs.writeFileSync(tmpPath, fileBuffer);
-
         const storagePath = `${BASE_PATH}/${zonaKode}/${tokoKode}/${category}/${originalName}`;
-        // Use parent directory as dest for 'copy' (avoids mkParentDir conflict)
-        const parentDir = `${PRIMARY_REMOTE}:${BASE_PATH}/${zonaKode}/${tokoKode}/${category}/`;
 
         try {
-            console.log(`[Rclone] Uploading ${originalName} to ${parentDir}...`);
-            // Pre-create parent directory
-            try { await rcloneExec(['mkdir', parentDir]); } catch (_) { }
+            console.log(`[Upload] Sending ${originalName} to Terabox via Alist API...`);
 
-            // Use 'copy' instead of 'copyto' to avoid WebDAV mkParentDir 409 Conflict
-            await rcloneExec(['copy', tmpPath, parentDir, '--no-check-dest', '--retries', '5', '--retries-sleep', '2s']);
-            console.log(`[Rclone] Upload success for: ${originalName}`);
+            // Use Alist REST API (Bypasses WebDAV mkParentDir 409 Conflict entirely)
+            const alistDomain = 'http://127.0.0.1:5244';
 
-            // Upload to backup (Storj) — fire and forget
-            const backupDir = `${BACKUP_REMOTE}:${BASE_PATH}/${zonaKode}/${tokoKode}/${category}/`;
-            rcloneExec(['copy', tmpPath, backupDir, '--no-check-dest']).then(() => {
-                console.log(`[Rclone] Backup to storj complete.`);
-            }).catch(err => {
-                console.warn(`[Rclone] Backup failed (non-critical):`, err.message);
+            // 1. Get Token
+            const tokenResponse = await fetch(`${alistDomain}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'admin', password: 'AdminArsip2026!' })
             });
+            const tokenData = await tokenResponse.json();
+            const token = tokenData.data?.token;
+            if (!token) throw new Error('Alist login failed: ' + tokenData.message);
+
+            // 2. Put File directly
+            const putResponse = await fetch(`${alistDomain}/api/fs/put`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': token,
+                    'File-Path': encodeURIComponent('/terabox' + storagePath)
+                },
+                body: fileBuffer
+            });
+            const putData = await putResponse.json();
+            if (putData.code !== 200) throw new Error('Alist API upload failed: ' + putData.message);
+
+            console.log(`[Upload] Alist API upload success for: ${originalName}`);
+
+            // Backup to Storj (fire and forget via rcat)
+            const backupDest = `${BACKUP_REMOTE}:${storagePath}`;
+            const backupPromise = new Promise((resolve, reject) => {
+                const isWindows = process.platform === 'win32';
+                const rclonePath = isWindows ? path.join(__dirname, '..', 'rclone.exe') : 'rclone';
+                const configPath = process.env.RCLONE_CONFIG || path.join(__dirname, '..', 'rclone.conf');
+                const child = spawn(rclonePath, ['--config', configPath, 'rcat', backupDest]);
+                child.on('close', (code) => code === 0 ? resolve() : reject(new Error('Backup rcat failed')));
+                child.on('error', reject);
+                child.stdin.write(fileBuffer);
+                child.stdin.end();
+            });
+            backupPromise
+                .then(() => console.log(`[Rclone] Backup to storj complete.`))
+                .catch(err => console.warn(`[Rclone] Backup failed (non-critical):`, err.message));
 
             return { storagePath, size: fileBuffer.length };
         } catch (err) {
-            console.error(`[Rclone Upload Error]`, err);
+            console.error(`[Upload Error]`, err);
             throw err;
-        } finally {
-            // Cleanup temp file
-            try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch (_) { }
         }
     },
 
@@ -172,29 +188,56 @@ const RcloneStorage = {
      * Path: terabox:/arsip/ads-media/{category}/{filename}
      */
     async uploadMedia(fileBuffer, originalName, category) {
-        const tmpDir = path.join(__dirname, 'tmp');
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-
-        const tmpPath = path.join(tmpDir, originalName);
-        fs.writeFileSync(tmpPath, fileBuffer);
-
         // Use lowercase category to match existing folders
         const storagePath = `/ads-media/${category}/${originalName}`;
-        const primaryDest = `${PRIMARY_REMOTE}:/ads-media/${category}/`;
 
         try {
-            await rcloneExec(['copy', tmpPath, primaryDest, '--no-traverse', '--retries', '5', '--retries-sleep', '2s']);
-            console.log(`[Rclone] Media uploaded: ${storagePath}`);
+            console.log(`[Upload] Sending Media ${originalName} to Terabox via Alist API...`);
 
-            // Backup (fire and forget)
-            const backupDest = `${BACKUP_REMOTE}:/ads-media/${category}/`;
-            rcloneExec(['copy', tmpPath, backupDest, '--no-traverse']).catch(err => {
-                console.warn(`[Rclone] Media backup failed (non-critical):`, err.message);
+            const alistDomain = 'http://127.0.0.1:5244';
+
+            // 1. Get Token
+            const tokenResponse = await fetch(`${alistDomain}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'admin', password: 'AdminArsip2026!' })
             });
+            const tokenData = await tokenResponse.json();
+            const token = tokenData.data?.token;
+            if (!token) throw new Error('Alist login failed: ' + tokenData.message);
+
+            // 2. Put File directly
+            const putResponse = await fetch(`${alistDomain}/api/fs/put`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': token,
+                    'File-Path': encodeURIComponent('/terabox' + storagePath)
+                },
+                body: fileBuffer
+            });
+            const putData = await putResponse.json();
+            if (putData.code !== 200) throw new Error('Alist API upload failed: ' + putData.message);
+
+            console.log(`[Upload] Media API upload success for: ${originalName}`);
+
+            // Backup (fire and forget via rcat)
+            const backupDest = `${BACKUP_REMOTE}:${storagePath}`;
+            const backupPromise = new Promise((resolve, reject) => {
+                const isWindows = process.platform === 'win32';
+                const rclonePath = isWindows ? path.join(__dirname, '..', 'rclone.exe') : 'rclone';
+                const configPath = process.env.RCLONE_CONFIG || path.join(__dirname, '..', 'rclone.conf');
+                const child = spawn(rclonePath, ['--config', configPath, 'rcat', backupDest]);
+                child.on('close', (code) => code === 0 ? resolve() : reject(new Error('Backup rcat failed')));
+                child.on('error', reject);
+                child.stdin.write(fileBuffer);
+                child.stdin.end();
+            });
+            backupPromise.catch(err => console.warn(`[Rclone] Media backup failed:`, err.message));
 
             return { storagePath, size: fileBuffer.length };
-        } finally {
-            try { fs.unlinkSync(tmpPath); } catch (_) { }
+        } catch (err) {
+            console.error(`[Upload Media Error]`, err);
+            throw err;
         }
     },
 
