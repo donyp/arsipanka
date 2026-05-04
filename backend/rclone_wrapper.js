@@ -105,13 +105,18 @@ const RcloneStorage = {
             const token = tokenData.data?.token;
             if (!token) throw new Error('Alist login failed: ' + tokenData.message);
 
-            // 1.5 Create Parent Directory first using Alist mkdir
+            // 1.5 Create Parent Directory recursively using Alist mkdir
             const parentUrlPath = '/terabox' + storagePath.substring(0, storagePath.lastIndexOf('/'));
-            await fetch(`${alistDomain}/api/fs/mkdir`, {
-                method: 'POST',
-                headers: { 'Authorization': token, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path: parentUrlPath })
-            });
+            const pathParts = parentUrlPath.split('/').filter(Boolean);
+            let currentPath = '';
+            for (const part of pathParts) {
+                currentPath += '/' + part;
+                await fetch(`${alistDomain}/api/fs/mkdir`, {
+                    method: 'POST',
+                    headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: currentPath })
+                });
+            }
 
             // 2. Put File directly
             const putResponse = await fetch(`${alistDomain}/api/fs/put`, {
@@ -214,13 +219,18 @@ const RcloneStorage = {
             const token = tokenData.data?.token;
             if (!token) throw new Error('Alist login failed: ' + tokenData.message);
 
-            // 1.5 Create Parent Directory first using Alist mkdir
+            // 1.5 Create Parent Directory recursively using Alist mkdir
             const parentUrlPath = '/terabox' + storagePath.substring(0, storagePath.lastIndexOf('/'));
-            await fetch(`${alistDomain}/api/fs/mkdir`, {
-                method: 'POST',
-                headers: { 'Authorization': token, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path: parentUrlPath })
-            });
+            const pathParts = parentUrlPath.split('/').filter(Boolean);
+            let currentPath = '';
+            for (const part of pathParts) {
+                currentPath += '/' + part;
+                await fetch(`${alistDomain}/api/fs/mkdir`, {
+                    method: 'POST',
+                    headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: currentPath })
+                });
+            }
 
             // 2. Put File directly
             const putResponse = await fetch(`${alistDomain}/api/fs/put`, {
