@@ -5,6 +5,33 @@ const { execFile, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+class Mutex {
+    constructor() {
+        this.queue = [];
+        this.locked = false;
+    }
+    lock() {
+        return new Promise(resolve => {
+            if (!this.locked) {
+                this.locked = true;
+                resolve();
+            } else {
+                this.queue.push(resolve);
+            }
+        });
+    }
+    unlock() {
+        if (this.queue.length > 0) {
+            const nextResolve = this.queue.shift();
+            nextResolve();
+        } else {
+            this.locked = false;
+        }
+    }
+}
+
+const mkdirMutex = new Mutex();
+
 // Rclone remote names (must match rclone.conf)
 const PRIMARY_REMOTE = process.env.RCLONE_PRIMARY_REMOTE || 'terabox';
 const BACKUP_REMOTE = process.env.RCLONE_BACKUP_REMOTE || 'storj';
@@ -109,21 +136,38 @@ const RcloneStorage = {
             const parentUrlPath = '/terabox' + storagePath.substring(0, storagePath.lastIndexOf('/'));
             const pathParts = parentUrlPath.split('/').filter(Boolean);
             let currentPath = '';
-            for (const part of pathParts) {
-                currentPath += '/' + part;
-                await fetch(`${alistDomain}/api/fs/mkdir`, {
-                    method: 'POST',
-                    headers: { 'Authorization': token, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ path: currentPath })
-                });
 
-                // Force Alist/Terabox to flush cache to prevent "object not found" on sub-folders
-                await new Promise(resolve => setTimeout(resolve, 500));
-                await fetch(`${alistDomain}/api/fs/list`, {
-                    method: 'POST',
-                    headers: { 'Authorization': token, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ path: currentPath, password: '', page: 1, per_page: 1, refresh: true })
-                }).catch(() => { });
+            // Use Mutex to prevent race conditions when creating nested directories during bulk uploads
+            await mkdirMutex.lock();
+            try {
+                for (const part of pathParts) {
+                    currentPath += '/' + part;
+
+                    // Verify if directory exists first to avoid unnecessary Mkdirs with delays
+                    const listCheck = await fetch(`${alistDomain}/api/fs/list`, {
+                        method: 'POST',
+                        headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: currentPath, password: '', page: 1, per_page: 1 })
+                    }).then(r => r.json()).catch(() => ({ code: 500 }));
+
+                    if (listCheck.code !== 200) {
+                        await fetch(`${alistDomain}/api/fs/mkdir`, {
+                            method: 'POST',
+                            headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ path: currentPath })
+                        });
+
+                        // Force Alist/Terabox to flush cache to prevent "object not found" on sub-folders
+                        await new Promise(resolve => setTimeout(resolve, 800));
+                        await fetch(`${alistDomain}/api/fs/list`, {
+                            method: 'POST',
+                            headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ path: currentPath, password: '', page: 1, per_page: 1, refresh: true })
+                        }).catch(() => { });
+                    }
+                }
+            } finally {
+                mkdirMutex.unlock();
             }
 
             // 2. Put File directly
@@ -231,21 +275,38 @@ const RcloneStorage = {
             const parentUrlPath = '/terabox' + storagePath.substring(0, storagePath.lastIndexOf('/'));
             const pathParts = parentUrlPath.split('/').filter(Boolean);
             let currentPath = '';
-            for (const part of pathParts) {
-                currentPath += '/' + part;
-                await fetch(`${alistDomain}/api/fs/mkdir`, {
-                    method: 'POST',
-                    headers: { 'Authorization': token, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ path: currentPath })
-                });
 
-                // Force Alist/Terabox to flush cache to prevent "object not found" on sub-folders
-                await new Promise(resolve => setTimeout(resolve, 500));
-                await fetch(`${alistDomain}/api/fs/list`, {
-                    method: 'POST',
-                    headers: { 'Authorization': token, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ path: currentPath, password: '', page: 1, per_page: 1, refresh: true })
-                }).catch(() => { });
+            // Use Mutex to prevent race conditions when creating nested directories during bulk uploads
+            await mkdirMutex.lock();
+            try {
+                for (const part of pathParts) {
+                    currentPath += '/' + part;
+
+                    // Verify if directory exists first to avoid unnecessary Mkdirs with delays
+                    const listCheck = await fetch(`${alistDomain}/api/fs/list`, {
+                        method: 'POST',
+                        headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: currentPath, password: '', page: 1, per_page: 1 })
+                    }).then(r => r.json()).catch(() => ({ code: 500 }));
+
+                    if (listCheck.code !== 200) {
+                        await fetch(`${alistDomain}/api/fs/mkdir`, {
+                            method: 'POST',
+                            headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ path: currentPath })
+                        });
+
+                        // Force Alist/Terabox to flush cache to prevent "object not found" on sub-folders
+                        await new Promise(resolve => setTimeout(resolve, 800));
+                        await fetch(`${alistDomain}/api/fs/list`, {
+                            method: 'POST',
+                            headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ path: currentPath, password: '', page: 1, per_page: 1, refresh: true })
+                        }).catch(() => { });
+                    }
+                }
+            } finally {
+                mkdirMutex.unlock();
             }
 
             // 2. Put File directly
