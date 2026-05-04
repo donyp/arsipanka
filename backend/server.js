@@ -587,6 +587,14 @@ app.post('/api/files/upload', authenticateToken, authorizeRole('super_admin'), u
             if (toko) tokoKode = toko.kode;
         }
 
+        // Validate Date (tanggal_dokumen)
+        if (req.body.tanggal_dokumen) {
+            const parsedDate = Date.parse(req.body.tanggal_dokumen);
+            if (isNaN(parsedDate)) {
+                return res.status(400).json({ error: 'Format tanggal_dokumen tidak valid atau tidak terbaca kalender.' });
+            }
+        }
+
         // Upload via Rclone
         const { storagePath, size } = await RcloneStorage.upload(
             req.file.buffer,

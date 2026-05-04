@@ -162,8 +162,15 @@ function extractDateFromFilename(name) {
         const month = months[monthAbbr];
 
         if (month) {
-            const year = new Date().getFullYear(); // Assume current year
-            return `${year}-${month}-${day}`;
+            const dayNum = parseInt(day);
+            const monthNum = parseInt(month);
+            const yearNum = new Date().getFullYear();
+
+            // Validate date rollover (e.g., April 31 -> May 1)
+            const dObj = new Date(yearNum, monthNum - 1, dayNum);
+            if (dObj.getFullYear() === yearNum && dObj.getMonth() === monthNum - 1 && dObj.getDate() === dayNum) {
+                return `${yearNum}-${month}-${day}`;
+            }
         }
     }
     return null;

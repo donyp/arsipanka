@@ -301,8 +301,14 @@ function formatDateToISO(excelDate) {
     // Explicitly handle 19-04-2026 or 19/04/2026
     const indonesianMatch = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
     if (indonesianMatch) {
-        const d = new Date(indonesianMatch[3], indonesianMatch[2] - 1, indonesianMatch[1]);
-        if (!isNaN(d.getTime())) return d.toISOString();
+        const yearNum = parseInt(indonesianMatch[3]);
+        const monthNum = parseInt(indonesianMatch[2]);
+        const dayNum = parseInt(indonesianMatch[1]);
+        const d = new Date(yearNum, monthNum - 1, dayNum);
+        // Validate rollover
+        if (d.getFullYear() === yearNum && d.getMonth() === monthNum - 1 && d.getDate() === dayNum) {
+            return d.toISOString();
+        }
     }
 
     const d = new Date(s);
