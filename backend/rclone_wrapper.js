@@ -105,6 +105,14 @@ const RcloneStorage = {
             const token = tokenData.data?.token;
             if (!token) throw new Error('Alist login failed: ' + tokenData.message);
 
+            // 1.5 Create Parent Directory first using Alist mkdir
+            const parentUrlPath = '/terabox' + storagePath.substring(0, storagePath.lastIndexOf('/'));
+            await fetch(`${alistDomain}/api/fs/mkdir`, {
+                method: 'POST',
+                headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: parentUrlPath })
+            });
+
             // 2. Put File directly
             const putResponse = await fetch(`${alistDomain}/api/fs/put`, {
                 method: 'PUT',
@@ -205,6 +213,14 @@ const RcloneStorage = {
             const tokenData = await tokenResponse.json();
             const token = tokenData.data?.token;
             if (!token) throw new Error('Alist login failed: ' + tokenData.message);
+
+            // 1.5 Create Parent Directory first using Alist mkdir
+            const parentUrlPath = '/terabox' + storagePath.substring(0, storagePath.lastIndexOf('/'));
+            await fetch(`${alistDomain}/api/fs/mkdir`, {
+                method: 'POST',
+                headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: parentUrlPath })
+            });
 
             // 2. Put File directly
             const putResponse = await fetch(`${alistDomain}/api/fs/put`, {
