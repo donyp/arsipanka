@@ -116,6 +116,14 @@ const RcloneStorage = {
                     headers: { 'Authorization': token, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ path: currentPath })
                 });
+
+                // Force Alist/Terabox to flush cache to prevent "object not found" on sub-folders
+                await new Promise(resolve => setTimeout(resolve, 500));
+                await fetch(`${alistDomain}/api/fs/list`, {
+                    method: 'POST',
+                    headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: currentPath, password: '', page: 1, per_page: 1, refresh: true })
+                }).catch(() => { });
             }
 
             // 2. Put File directly
@@ -230,6 +238,14 @@ const RcloneStorage = {
                     headers: { 'Authorization': token, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ path: currentPath })
                 });
+
+                // Force Alist/Terabox to flush cache to prevent "object not found" on sub-folders
+                await new Promise(resolve => setTimeout(resolve, 500));
+                await fetch(`${alistDomain}/api/fs/list`, {
+                    method: 'POST',
+                    headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: currentPath, password: '', page: 1, per_page: 1, refresh: true })
+                }).catch(() => { });
             }
 
             // 2. Put File directly
