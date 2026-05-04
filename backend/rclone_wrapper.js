@@ -31,6 +31,7 @@ class Mutex {
 }
 
 const mkdirMutex = new Mutex();
+const globalUploadMutex = new Mutex();
 const createdDirsCache = new Set();
 
 // Rclone remote names (must match rclone.conf)
@@ -117,6 +118,7 @@ const RcloneStorage = {
     async upload(fileBuffer, originalName, zonaKode, tokoKode, category) {
         const storagePath = `${BASE_PATH}/${zonaKode}/${tokoKode}/${category}/${originalName}`;
 
+        await globalUploadMutex.lock();
         try {
             console.log(`[Upload] Sending ${originalName} to Terabox via Alist API...`);
 
@@ -226,6 +228,8 @@ const RcloneStorage = {
         } catch (err) {
             console.error(`[Upload Error]`, err);
             throw err;
+        } finally {
+            globalUploadMutex.unlock();
         }
     },
 
@@ -278,6 +282,7 @@ const RcloneStorage = {
         // Use lowercase category to match existing folders
         const storagePath = `/ads-media/${category}/${originalName}`;
 
+        await globalUploadMutex.lock();
         try {
             console.log(`[Upload] Sending Media ${originalName} to Terabox via Alist API...`);
 
@@ -384,6 +389,8 @@ const RcloneStorage = {
         } catch (err) {
             console.error(`[Upload Media Error]`, err);
             throw err;
+        } finally {
+            globalUploadMutex.unlock();
         }
     },
 
