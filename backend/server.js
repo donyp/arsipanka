@@ -934,7 +934,8 @@ app.put('/api/files/:id/restore', authenticateToken, authorizeRole('super_admin'
 // GET/POST /api/files/bulk-download - Download multiple files as ZIP
 app.all('/api/files/bulk-download', authenticateToken, async (req, res) => {
     try {
-        if (req.user.role !== 'super_admin') {
+        // Permission Check: super_admin, moderator, and admin_zona are allowed
+        if (req.user.role !== 'super_admin' && req.user.role !== 'moderator' && req.user.role !== 'admin_zona') {
             const perms = req.user.permissions || [];
             if (!perms.includes('bulk_download')) {
                 return res.status(403).json({ error: 'Akses ditolak. Dibutuhkan izin Unduh ZIP Massal.' });
