@@ -102,30 +102,33 @@ const RcloneStorage = {
     },
 
     /**
-     * Stream a file from primary storage (Terabox) directly.
-     * Uses 'rclone cat' with RAW URL to output to stdout.
+     * Get a readable stream for a file from Alist Raw URL.
+     * Uses global fetch (Node 18+) for more direct proxying.
+     */
+    async getStream(storagePath) {
+        const rawUrl = await this.getRawUrl(storagePath);
+        console.log(`[Stream] Proxying raw URL: ${rawUrl.substring(0, 100)}...`);
+
+        const response = await fetch(rawUrl);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch raw URL: ${response.status} ${response.statusText}`);
+        }
+
+        // Node 18+ fetch returns a Web Stream (ReadableStream). 
+        // We convert to Node stream for express compatibility.
+        const { Readable } = require('stream');
+        if (response.body.getReader) {
+            return Readable.fromWeb(response.body);
+        }
+        return response.body;
+    },
+
+    /**
+     * Legacy rclone stream (for ZIP logic compatibility if needed)
      */
     async stream(storagePath) {
         const rawUrl = await this.getRawUrl(storagePath);
-        console.log(`[Stream] Generating stream for: ${storagePath} via ${rawUrl.substring(0, 50)}...`);
-        // Add flags for better reliability on signed URLs
-        const proc = rcloneSpawn(['cat', '--http-no-head', rawUrl]);
-
-        // Log stderr for debugging
-        let stderr = '';
-        proc.stderr.on('data', (d) => {
-            stderr += d.toString();
-        });
-        proc.on('close', (code) => {
-            if (code !== 0) {
-                console.error(`[Rclone Stream Error] Code ${code}: ${stderr}`);
-                try {
-                    fs.appendFileSync(path.join(__dirname, 'debug_view_error.log'), `[${new Date().toISOString()}] Path: ${storagePath}, URL: ${rawUrl}, Error: ${stderr}\n`);
-                } catch (_) { }
-            }
-        });
-
-        return proc;
+        return rcloneSpawn(['cat', '--http-no-head', rawUrl]);
     },
 
 

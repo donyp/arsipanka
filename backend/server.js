@@ -524,13 +524,13 @@ app.get('/api/files/:id/view', authenticateToken, async (req, res) => {
             }
         }
 
-        // Stream directly from Rclone
-        let rcloneProcess;
+        // Stream directly from Alist via Fetch Proxy
+        let fileStream;
         try {
-            rcloneProcess = await RcloneStorage.stream(file.storage_path);
+            fileStream = await RcloneStorage.getStream(file.storage_path);
         } catch (downloadErr) {
-            console.error(`[Rclone Stream Error] Path: ${file.storage_path}`, downloadErr);
-            return res.status(500).json({ error: 'Gagal menghubungkan storage.' });
+            console.error(`[Alist Stream Error] Path: ${file.storage_path}`, downloadErr);
+            return res.status(500).json({ error: 'Gagal memuat data dari storage.' });
         }
 
         // Mark as read
@@ -558,15 +558,10 @@ app.get('/api/files/:id/view', authenticateToken, async (req, res) => {
             res.setHeader('Content-Length', file.ukuran_bytes);
         }
 
-        // Handle client disconnect: kill rclone to save bandwidth/process
-        req.on('close', () => {
-            if (rcloneProcess && rcloneProcess.kill) rcloneProcess.kill();
-        });
+        fileStream.pipe(res);
 
-        rcloneProcess.stdout.pipe(res);
-
-        rcloneProcess.on('error', (err) => {
-            console.error('[Rclone Stream Error]', err);
+        fileStream.on('error', (err) => {
+            console.error('[Stream error]', err);
             if (!res.headersSent) res.status(500).send('Stream error');
         });
 
@@ -603,11 +598,11 @@ app.get('/api/files/:id/download', authenticateToken, async (req, res) => {
         }
 
         // Stream directly
-        let rcloneProcess;
+        let fileStream;
         try {
-            rcloneProcess = await RcloneStorage.stream(file.storage_path);
+            fileStream = await RcloneStorage.getStream(file.storage_path);
         } catch (downloadErr) {
-            console.error(`[Rclone Stream Error] Path: ${file.storage_path}`, downloadErr);
+            console.error(`[Alist Stream Error] Path: ${file.storage_path}`, downloadErr);
             return res.status(500).json({ error: 'Gagal mendownload file.' });
         }
 
@@ -617,14 +612,10 @@ app.get('/api/files/:id/download', authenticateToken, async (req, res) => {
             res.setHeader('Content-Length', file.ukuran_bytes);
         }
 
-        req.on('close', () => {
-            if (rcloneProcess && rcloneProcess.kill) rcloneProcess.kill();
-        });
+        fileStream.pipe(res);
 
-        rcloneProcess.stdout.pipe(res);
-
-        rcloneProcess.on('error', (err) => {
-            console.error('[Rclone Stream Error]', err);
+        fileStream.on('error', (err) => {
+            console.error('[Stream Error]', err);
         });
 
     } catch (err) {
@@ -995,28 +986,17 @@ app.post('/api/files/bulk-download', authenticateToken, async (req, res) => {
         res.attachment(`arsip_batch_${Date.now()}.zip`);
         archive.pipe(res);
 
-        // Track running processes to kill them if client disconnects
-        const activeProcesses = new Set();
-        req.on('close', () => {
-            for (const p of activeProcesses) {
-                if (p && p.kill) p.kill();
-            }
-        });
-
         // 3. Add files to ZIP sequentially to prevent server overload
         for (const file of allowedFiles) {
             try {
-                const rcloneProcess = await RcloneStorage.stream(file.storage_path);
-                activeProcesses.add(rcloneProcess);
+                const fileStream = await RcloneStorage.getStream(file.storage_path);
 
-                archive.append(rcloneProcess.stdout, { name: file.nama_file });
+                archive.append(fileStream, { name: file.nama_file });
 
-                // Wait for this specific process to finish before starting the next one
-                await new Promise((resolve) => {
-                    rcloneProcess.on('close', (code) => {
-                        activeProcesses.delete(rcloneProcess);
-                        resolve();
-                    });
+                // Wait for this specific stream to finish before starting the next one
+                await new Promise((resolve, reject) => {
+                    fileStream.on('end', resolve);
+                    fileStream.on('error', reject);
                 });
             } catch (err) {
                 console.warn(`[Bulk Download] Failed to stream ${file.nama_file}:`, err.message);
