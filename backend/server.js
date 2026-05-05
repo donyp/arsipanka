@@ -524,13 +524,13 @@ app.get('/api/files/:id/view', authenticateToken, async (req, res) => {
             }
         }
 
-        // Download from Rclone to temp, then stream to client
-        let localPath;
+        // Stream directly from Rclone
+        let rcloneProcess;
         try {
-            localPath = await RcloneStorage.download(file.storage_path);
+            rcloneProcess = await RcloneStorage.stream(file.storage_path);
         } catch (downloadErr) {
-            console.error(`[Rclone Download Error] Path: ${file.storage_path}`, downloadErr);
-            return res.status(500).json({ error: 'Gagal mendownload file dari storage.' });
+            console.error(`[Rclone Stream Error] Path: ${file.storage_path}`, downloadErr);
+            return res.status(500).json({ error: 'Gagal menghubungkan storage.' });
         }
 
         // Mark as read
@@ -555,15 +555,16 @@ app.get('/api/files/:id/view', authenticateToken, async (req, res) => {
         res.setHeader('Content-Type', mimeType);
         res.setHeader('Content-Disposition', `inline; filename="${file.nama_file}"`);
 
-        const stream = fs.createReadStream(localPath);
-        stream.pipe(res);
-        stream.on('end', () => {
-            // Cleanup temp
-            setTimeout(() => {
-                try {
-                    if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
-                } catch (_) { }
-            }, 1000); // Small delay to ensure stream is fully closed
+        // Handle client disconnect: kill rclone to save bandwidth/process
+        req.on('close', () => {
+            if (rcloneProcess && rcloneProcess.kill) rcloneProcess.kill();
+        });
+
+        rcloneProcess.stdout.pipe(res);
+
+        rcloneProcess.on('error', (err) => {
+            console.error('[Rclone Stream Error]', err);
+            if (!res.headersSent) res.status(500).send('Stream error');
         });
 
     } catch (err) {
@@ -975,12 +976,11 @@ app.post('/api/files/bulk-download', authenticateToken, async (req, res) => {
         }
 
         // Use allowedFiles for the rest of the logic
-        const archive = archiver('zip', { zlib: { level: 9 } });
+        const archive = archiver('zip', { zlib: { level: 5 } }); // Level 5 for better speed
 
         // Error handling for archive
         archive.on('error', (err) => {
             console.error('[Archiver Error]', err);
-            // If headers not sent yet, send 500
             if (!res.headersSent) res.status(500).send({ error: err.message });
         });
 
@@ -988,38 +988,33 @@ app.post('/api/files/bulk-download', authenticateToken, async (req, res) => {
         res.attachment(`arsip_batch_${Date.now()}.zip`);
         archive.pipe(res);
 
-        const localPaths = [];
-
-        // 3. Add files to ZIP in parallel (concurrency limit)
-        // We use a simple parallel map with a concurrency of 3
-        const downloadFile = async (file) => {
-            try {
-                const localPath = await RcloneStorage.download(file.storage_path);
-                localPaths.push(localPath);
-                archive.file(localPath, { name: file.nama_file });
-            } catch (err) {
-                console.warn(`[Bulk Download] Failed to download ${file.nama_file}:`, err.message);
-            }
-        };
-
-        // Process in chunks of 4 for better speed without overbalancing local temp size
-        const concurrency = 4;
-        for (let i = 0; i < allowedFiles.length; i += concurrency) {
-            const chunk = allowedFiles.slice(i, i + concurrency);
-            await Promise.all(chunk.map(f => downloadFile(f)));
-        }
-
-        // 4. Cleanup on finish
-        res.on('finish', () => {
-            console.log(`[Bulk Download] Stream finished. Cleaning up ${localPaths.length} files...`);
-            for (const p of localPaths) {
-                try {
-                    if (fs.existsSync(p)) fs.unlinkSync(p);
-                } catch (e) {
-                    console.warn(`[Cleanup] Failed to delete ${p}:`, e.message);
-                }
+        // Track running processes to kill them if client disconnects
+        const activeProcesses = new Set();
+        req.on('close', () => {
+            for (const p of activeProcesses) {
+                if (p && p.kill) p.kill();
             }
         });
+
+        // 3. Add files to ZIP sequentially to prevent server overload
+        for (const file of allowedFiles) {
+            try {
+                const rcloneProcess = await RcloneStorage.stream(file.storage_path);
+                activeProcesses.add(rcloneProcess);
+
+                archive.append(rcloneProcess.stdout, { name: file.nama_file });
+
+                // Wait for this specific process to finish before starting the next one
+                await new Promise((resolve) => {
+                    rcloneProcess.on('close', (code) => {
+                        activeProcesses.delete(rcloneProcess);
+                        resolve();
+                    });
+                });
+            } catch (err) {
+                console.warn(`[Bulk Download] Failed to stream ${file.nama_file}:`, err.message);
+            }
+        }
 
         await archive.finalize();
 
