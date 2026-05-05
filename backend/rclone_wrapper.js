@@ -5,32 +5,11 @@ const { execFile, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-class Mutex {
-    constructor() {
-        this.queue = [];
-        this.locked = false;
-    }
-    lock() {
-        return new Promise(resolve => {
-            if (!this.locked) {
-                this.locked = true;
-                resolve();
-            } else {
-                this.queue.push(resolve);
-            }
-        });
-    }
-    unlock() {
-        if (this.queue.length > 0) {
-            const nextResolve = this.queue.shift();
-            nextResolve();
-        } else {
-            this.locked = false;
-        }
-    }
-}
 
-const globalUploadMutex = new Mutex();
+let alistTokenCache = {
+    token: null,
+    expiry: 0
+};
 const createdDirsCache = new Set();
 
 // Rclone remote names (must match rclone.conf)
@@ -105,21 +84,31 @@ const RcloneStorage = {
     async upload(fileBuffer, originalName, zonaKode, tokoKode, category) {
         const storagePath = `${BASE_PATH}/${zonaKode}/${tokoKode}/${category}/${originalName}`;
 
-        await globalUploadMutex.lock();
+        
         try {
             console.log(`[Upload] Sending ${originalName} to Terabox via Alist API...`);
 
             const alistDomain = 'http://127.0.0.1:5244';
 
-            // 1. Get Token
-            const tokenResponse = await fetch(`${alistDomain}/api/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: 'admin', password: 'AdminArsip2026!' })
-            });
-            const tokenData = await tokenResponse.json();
-            const token = tokenData.data?.token;
-            if (!token) throw new Error('Alist login failed: ' + tokenData.message);
+            // 1. Get Token (with caching)
+            let token = alistTokenCache.token;
+            if (!token || Date.now() > alistTokenCache.expiry) {
+                console.log(`[Upload] Alist Token expired or missing. Logging in...`);
+                const tokenResponse = await fetch(`${alistDomain}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'AdminArsip2026!' })
+                });
+                const tokenData = await tokenResponse.json();
+                token = tokenData.data?.token;
+                if (!token) throw new Error('Alist login failed: ' + tokenData.message);
+
+                // Cache token for 24 hours (Alist default is long, but 24h is safe)
+                alistTokenCache = {
+                    token: token,
+                    expiry: Date.now() + 24 * 60 * 60 * 1000
+                };
+            }
 
             // 1.5 Create Parent Directory using robust rclone mkdir
             const parentFolderPath = storagePath.substring(0, storagePath.lastIndexOf('/'));
@@ -130,21 +119,26 @@ const RcloneStorage = {
                     console.log(`[Upload] Running rclone mkdir for: ${parentFolderPath}`);
                     await rcloneExec(['mkdir', `${PRIMARY_REMOTE}:${parentFolderPath}`]);
 
-                    // Recursive Alist Refresh: Force Alist to sync each path segment from Terabox
+                    // Recursive Alist Refresh (Optimized: Parallel Segment Refresh)
                     console.log(`[Upload] Forcing Alist cache refresh for path: ${parentFolderPath}`);
                     const segments = parentFolderPath.split('/').filter(Boolean);
-                    let currentSyncPath = '';
+                    let currentSyncPathArr = [];
+                    const refreshPromises = [];
+
                     for (const segment of segments) {
-                        currentSyncPath += '/' + segment;
-                        // Skip refreshing the root /arsip if it's already highly stable
+                        currentSyncPathArr.push(segment);
+                        const currentSyncPath = '/' + currentSyncPathArr.join('/');
                         if (currentSyncPath === BASE_PATH) continue;
 
-                        await fetch(`${alistDomain}/api/fs/list`, {
-                            method: 'POST',
-                            headers: { 'Authorization': token, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ path: '/terabox' + currentSyncPath, refresh: true, page: 1, per_page: 1 })
-                        }).then(r => r.json()).catch(e => console.warn(`[Sync] Refresh failed for ${currentSyncPath}:`, e.message));
+                        refreshPromises.push(
+                            fetch(`${alistDomain}/api/fs/list`, {
+                                method: 'POST',
+                                headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ path: '/terabox' + currentSyncPath, refresh: true, page: 1, per_page: 1 })
+                            }).then(r => r.json()).catch(e => console.warn(`[Sync] Refresh failed for ${currentSyncPath}:`, e.message))
+                        );
                     }
+                    await Promise.all(refreshPromises);
 
                     createdDirsCache.add(parentFolderPath);
                 } catch (err) {
@@ -190,8 +184,6 @@ const RcloneStorage = {
         } catch (err) {
             console.error(`[Upload Error]`, err);
             throw err;
-        } finally {
-            globalUploadMutex.unlock();
         }
     },
 
@@ -201,7 +193,7 @@ const RcloneStorage = {
     async uploadMedia(fileBuffer, originalName, category) {
         const storagePath = `/ads-media/${category}/${originalName}`;
 
-        await globalUploadMutex.lock();
+        
         try {
             console.log(`[Upload] Sending Media ${originalName} to Terabox via Alist API...`);
 
@@ -267,8 +259,6 @@ const RcloneStorage = {
         } catch (err) {
             console.error(`[Upload Media Error]`, err);
             throw err;
-        } finally {
-            globalUploadMutex.unlock();
         }
     },
 

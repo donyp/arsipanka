@@ -22,9 +22,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadZonas();
     populateFilters();
     await loadArchives();
-    await loadBroadcast(); // New
-    if (isSuperAdmin()) {
-        await loadStorageStats(); // New
+    await loadBroadcast();
+
+    await loadStorageStats();
+    // Chart is available to ALL roles — backend handles zone filtering
+    await loadAnalyticsChart();
+
+    // Admin controls only for super admin
+    if (hasPermission('view_dashboard_stats')) {
         document.getElementById('admin-controls')?.classList.remove('hidden');
     }
     setupEventListeners();
@@ -95,7 +100,6 @@ async function loadArchives() {
         const { files } = await API.get(endpoint);
         archives = files || [];
         applyFilters();
-        updateStats();
         populateTokoFilter();
     } catch (err) {
         Toast.error('Gagal memuat arsip: ' + err.message);
@@ -110,7 +114,12 @@ function populateTokoFilter() {
     const zonaSelect = document.getElementById('filter-zona');
     if (!tokoSelect) return;
 
-    const zonaId = zonaSelect?.value;
+    let zonaId = zonaSelect?.value;
+
+    // Fix for admin_zona: if they have no zona select, use their zona_id from currentUser
+    if (!zonaId && typeof currentUser !== 'undefined' && currentUser.role === 'admin_zona') {
+        zonaId = currentUser.zona_id;
+    }
 
     // Disable if no zona selected
     tokoSelect.disabled = !zonaId;
@@ -145,10 +154,10 @@ function populateTokoFilter() {
 // ---- Update Stats ----
 function updateStats() {
     const el = (id) => document.getElementById(id);
-    if (el('stat-ppn')) el('stat-ppn').textContent = archives.filter(a => a.category === 'PPN').length;
-    if (el('stat-nonppn')) el('stat-nonppn').textContent = archives.filter(a => a.category === 'NON_PPN').length;
-    if (el('stat-invoice')) el('stat-invoice').textContent = archives.filter(a => a.category === 'INVOICE').length;
-    if (el('stat-piutang')) el('stat-piutang').textContent = archives.filter(a => a.category === 'PIUTANG').length;
+    if (el('stat-ppn')) el('stat-ppn').textContent = filteredArchives.filter(a => a.category === 'PPN').length;
+    if (el('stat-nonppn')) el('stat-nonppn').textContent = filteredArchives.filter(a => a.category === 'NON_PPN').length;
+    if (el('stat-invoice')) el('stat-invoice').textContent = filteredArchives.filter(a => a.category === 'INVOICE').length;
+    if (el('stat-piutang')) el('stat-piutang').textContent = filteredArchives.filter(a => a.category === 'PIUTANG').length;
 }
 
 // ---- Apply Filters ----
@@ -177,6 +186,7 @@ function applyFilters() {
     currentPage = 1;
     totalPages = Math.ceil(filteredArchives.length / CONFIG.PAGE_SIZE) || 1;
     renderTable();
+    updateStats();
 }
 
 // ---- Export CSV ----
@@ -249,7 +259,7 @@ function renderTable() {
     pagination?.classList.remove('hidden');
 
     tbody.innerHTML = pageItems.map((a, i) => {
-        let cleanName = a.nama_file.replace(/^(NON\s+|PPN\s+)/i, '');
+        let cleanName = a.nama_file.toUpperCase().replace(/^(NON\s+|PPN\s+)/i, '');
         // Strip out trailing or embedded dates like " 18 FEB"
         cleanName = cleanName.replace(/\s+\d{1,2}\s+(JAN|FEB|MAR|APR|MEI|MAY|JUN|JUL|AGU|AUG|SEP|OKT|OCT|NOV|DES|DEC)[A-Z]*\b/i, '').trim();
         return `
@@ -491,14 +501,17 @@ async function deleteBroadcast(id) {
 // ---- Storage Stats ----
 async function loadStorageStats() {
     try {
-        const { total_bytes, today_bytes, limit_bytes } = await API.get('/api/stats/storage');
+        const stats = await API.get('/api/stats/storage');
+        console.log('[STATS] Received:', stats);
+        const { total_bytes, today_bytes, limit_bytes } = stats;
 
         // 1. Used vs Total
         const storageEl = document.getElementById('stat-storage');
         const progressEl = document.getElementById('stat-storage-progress');
         if (storageEl && progressEl) {
             const usedGB = (total_bytes / (1024 ** 3)).toFixed(2);
-            const totalGB = (limit_bytes / (1024 ** 3)).toFixed(0);
+            // Fallback to 1024 GB if limit_bytes is missing or 0
+            const totalGB = ((limit_bytes || (1024 ** 4)) / (1024 ** 3)).toFixed(0);
             storageEl.textContent = `${usedGB} / ${totalGB} GB`;
 
             const percent = Math.min((total_bytes / limit_bytes) * 100, 100);
@@ -516,6 +529,186 @@ async function loadStorageStats() {
         }
     } catch (err) {
         console.warn('Failed to load storage stats:', err);
+    }
+}
+
+// ---- Analytics Chart ----
+let analyticsChartInstance = null;
+async function loadAnalyticsChart() {
+    try {
+        const stats = await API.get('/api/stats/chart');
+        console.log('[DEBUG_CHART] Frontend received stats:', stats);
+        const ctx = document.getElementById('analyticsChart');
+        if (!ctx) return;
+
+        // ========== ADMIN ZONA: Single-Zone Premium Card ==========
+        const isZoneAdmin = currentUser?.role === 'admin_zona';
+        if (isZoneAdmin && stats.labels?.length <= 2) {
+            const chartCard = ctx.closest('.glass-card');
+            if (!chartCard) return;
+
+            const zoneName = stats.labels[0] || 'Zona Anda';
+            const totalValue = stats.values[0] || 0;
+            const formatted = new Intl.NumberFormat('id-ID', {
+                style: 'currency', currency: 'IDR',
+                minimumFractionDigits: 0, maximumFractionDigits: 0
+            }).format(totalValue);
+            const invoiceCount = (typeof archives !== 'undefined' ? archives : []).filter(a => a.category === 'INVOICE').length;
+            const piutangCount = (typeof archives !== 'undefined' ? archives : []).filter(a => a.category === 'PIUTANG').length;
+
+            chartCard.style.background = 'linear-gradient(180deg, rgba(16,185,129,0.05) 0%, transparent 100%)';
+            chartCard.style.borderColor = 'rgba(16,185,129,0.15)';
+            chartCard.innerHTML = `
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Ringkasan Invoice — ${zoneName}
+                    </h3>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 tracking-wider uppercase">Zona Anda</span>
+                </div>
+                <div class="rounded-2xl p-6 border border-emerald-500/10 mb-4"
+                     style="background: linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(16,185,129,0.01) 100%);">
+                    <p class="text-xs text-emerald-400/70 font-medium uppercase tracking-wider mb-2">Total Nilai Invoice Merah</p>
+                    <p class="text-3xl md:text-4xl font-bold text-white tracking-tight">${formatted}</p>
+                    <div class="flex items-center gap-2 mt-3">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-red-500/15 text-red-400 border border-red-500/20">
+                            📄 ${invoiceCount} Invoice
+                        </span>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        if (analyticsChartInstance) {
+            analyticsChartInstance.destroy();
+        }
+
+        // Create gradient fill
+        const chartCtx = ctx.getContext('2d');
+        const gradient = chartCtx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(239, 68, 68, 0.7)');
+        gradient.addColorStop(0.5, 'rgba(239, 68, 68, 0.4)');
+        gradient.addColorStop(1, 'rgba(239, 68, 68, 0.1)');
+
+        const hoverGradient = chartCtx.createLinearGradient(0, 0, 0, 300);
+        hoverGradient.addColorStop(0, 'rgba(239, 68, 68, 0.95)');
+        hoverGradient.addColorStop(1, 'rgba(239, 68, 68, 0.5)');
+
+        analyticsChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: stats.labels,
+                datasets: [{
+                    label: 'Total Nilai Invoice (Rp)',
+                    data: stats.values,
+                    backgroundColor: gradient,
+                    borderColor: 'rgba(239, 68, 68, 0.6)',
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                    hoverBackgroundColor: hoverGradient,
+                    hoverBorderColor: 'rgb(239, 68, 68)',
+                    hoverBorderWidth: 2,
+                    barPercentage: 0.7,
+                    categoryPercentage: 0.8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 800,
+                    easing: 'easeOutQuart'
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            color: '#9ca3af',
+                            font: { family: "'Inter', sans-serif", size: 11, weight: '500' },
+                            usePointStyle: true,
+                            pointStyle: 'rectRounded',
+                            padding: 16
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        titleColor: '#f1f5f9',
+                        bodyColor: '#e2e8f0',
+                        borderColor: 'rgba(239, 68, 68, 0.3)',
+                        borderWidth: 1,
+                        cornerRadius: 10,
+                        padding: 12,
+                        titleFont: { family: "'Inter', sans-serif", weight: '600', size: 13 },
+                        bodyFont: { family: "'Inter', sans-serif", size: 12 },
+                        displayColors: false,
+                        callbacks: {
+                            title: function (items) {
+                                return '📍 ' + items[0].label;
+                            },
+                            label: function (context) {
+                                const val = context.parsed.y;
+                                if (val === 0) return '  Belum ada data';
+                                const formatted = new Intl.NumberFormat('id-ID', {
+                                    style: 'currency', currency: 'IDR',
+                                    minimumFractionDigits: 0, maximumFractionDigits: 0
+                                }).format(val);
+                                return '  💰 ' + formatted;
+                            },
+                            afterLabel: function (context) {
+                                const val = context.parsed.y;
+                                if (val === 0) return '';
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const pct = ((val / total) * 100).toFixed(1);
+                                return '  📊 ' + pct + '% dari total';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        border: { display: false },
+                        grid: {
+                            color: 'rgba(255,255,255,0.04)',
+                            drawTicks: false
+                        },
+                        ticks: {
+                            color: '#64748b',
+                            font: { family: "'Inter', sans-serif", size: 10, weight: '500' },
+                            padding: 8,
+                            callback: function (value) {
+                                if (value === 0) return 'Rp 0';
+                                if (value >= 1000000000) return 'Rp ' + (value / 1000000000).toLocaleString('id-ID', { maximumFractionDigits: 1 }) + ' M';
+                                if (value >= 1000000) return 'Rp ' + (value / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 0 }) + ' Jt';
+                                if (value >= 1000) return 'Rp ' + (value / 1000).toLocaleString('id-ID', { maximumFractionDigits: 0 }) + ' Rb';
+                                return 'Rp ' + value.toLocaleString('id-ID');
+                            }
+                        }
+                    },
+                    x: {
+                        border: { display: false },
+                        grid: { display: false },
+                        ticks: {
+                            color: '#64748b',
+                            font: { family: "'Inter', sans-serif", size: 10, weight: '500' },
+                            autoSkip: false,
+                            maxRotation: 45,
+                            minRotation: 45,
+                            padding: 4
+                        }
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.warn('Failed to load chart:', err);
     }
 }
 
@@ -648,16 +841,18 @@ function extractDateFromFilename(name) {
  * Bulk Selection Logic
  */
 function toggleSelectAll(master) {
+    if (master.checked) {
+        selectedIds = filteredArchives.map(a => a.id);
+    } else {
+        selectedIds = [];
+    }
+
+    // Sync UI for the current page only
     const checkboxes = document.querySelectorAll('.row-checkbox');
     checkboxes.forEach(cb => {
         cb.checked = master.checked;
-        const id = cb.getAttribute('data-id');
-        if (master.checked) {
-            if (!selectedIds.includes(id)) selectedIds.push(id);
-        } else {
-            selectedIds = selectedIds.filter(sid => sid !== id);
-        }
     });
+
     updateBulkUI();
 }
 
@@ -765,4 +960,38 @@ async function downloadSelected() {
         btn.innerHTML = originalContent;
         clearSelection();
     }
+}
+
+async function bulkDeleteSelected() {
+    if (selectedIds.length === 0) return;
+
+    showConfirmModal(
+        viewMode === 'active' ? 'Pindahkan ke Sampah' : 'Hapus Permanen',
+        viewMode === 'active'
+            ? `Apakah Anda yakin ingin memindahkan ${selectedIds.length} berkas ke Tong Sampah?`
+            : `HAPUS PERMANEN ${selectedIds.length} berkas? Tindakan ini tidak dapat dibatalkan.`,
+        async () => {
+            const btn = document.getElementById('btn-bulk-delete');
+            const originalContent = btn.innerHTML;
+            btn.disabled = true;
+
+            try {
+                const endpoint = viewMode === 'active'
+                    ? '/api/files/bulk-delete'
+                    : '/api/files/bulk-trash-delete';
+
+                await API.post(endpoint, { ids: selectedIds });
+
+                Toast.success(`${selectedIds.length} arsip berhasil dihapus.`);
+                clearSelection();
+                await loadArchives();
+            } catch (err) {
+                Toast.error('Gagal menghapus: ' + err.message);
+            } finally {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        },
+        'Hapus'
+    );
 }

@@ -139,20 +139,26 @@ function renderUsers() {
     tbody.innerHTML = users.map((u, i) => `
         <tr class="animate-fade-in" style="animation-delay: ${i * 30}ms">
             <td>
-                <div class="flex items-center gap-3">
-                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=6366f1&color=fff&size=40"
-                         alt="" class="w-8 h-8 rounded-full">
-                    <span class="font-medium text-white text-sm">${u.name}</span>
+                <div class="flex items-center gap-2">
+                    <div class="w-5 h-5 rounded-full bg-indigo-500/10 flex items-center justify-center text-[8px] font-bold text-indigo-400 uppercase border border-indigo-500/20">
+                        ${(u.name || 'A')[0]}
+                    </div>
+                    <span class="text-sm font-medium text-gray-300">${u.name || 'Admin (System)'}</span>
                 </div>
             </td>
             <td class="text-gray-400 text-sm font-mono">${u.email}</td>
             <td class="text-gray-400 text-sm">${u.contact_email || '-'}</td>
             <td>
-                <span class="${u.role === 'super_admin'
+                <!-- Check if moderator via permission override -->
+                ${(u.role === 'moderator' || (u.permissions && u.permissions.includes('IS_MODERATOR'))) ? `
+                    <span class="badge bg-purple-500/15 text-purple-400 border-purple-500/30">Moderator</span>
+                ` : `
+                    <span class="${u.role === 'super_admin'
             ? 'badge bg-indigo-500/15 text-indigo-400 border-indigo-500/30'
             : 'badge bg-emerald-500/15 text-emerald-400 border-emerald-500/30'}">
-                    ${u.role === 'super_admin' ? 'Super Admin' : 'Admin Zona'}
-                </span>
+                        ${u.role === 'super_admin' ? 'Super Admin' : 'Admin Zona'}
+                    </span>
+                `}
             </td>
             <td class="text-gray-400 text-sm">${u.zonas?.nama || '-'}</td>
             <td>
@@ -188,6 +194,7 @@ function openUserModal() {
     document.getElementById('modal-password').required = true;
     document.getElementById('password-hint').textContent = '';
     document.getElementById('modal-email').readOnly = false;
+    document.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = false);
     toggleZonaField();
     document.getElementById('user-modal').classList.remove('hidden');
 }
@@ -203,8 +210,22 @@ function editUser(user) {
     document.getElementById('modal-password').value = '';
     document.getElementById('modal-password').required = false;
     document.getElementById('password-hint').textContent = '(kosongkan jika tidak diubah)';
-    document.getElementById('modal-role').value = user.role;
-    document.getElementById('modal-zona').value = user.zona_id || '';
+
+    // Set permissions
+    const perms = user.permissions || [];
+    document.querySelectorAll('.perm-checkbox').forEach(cb => {
+        cb.checked = perms.includes(cb.value);
+    });
+
+    // Handle Moderator Role Display in Dropdown
+    if (user.role === 'moderator' || perms.includes('IS_MODERATOR')) {
+        document.getElementById('modal-role').value = 'moderator';
+        document.getElementById('modal-zona').value = '';
+    } else {
+        document.getElementById('modal-role').value = user.role;
+        document.getElementById('modal-zona').value = user.zona_id || '';
+    }
+
     toggleZonaField();
     document.getElementById('user-modal').classList.remove('hidden');
 }
@@ -220,9 +241,10 @@ function toggleZonaField() {
     const zonaField = document.getElementById('zona-field');
     const zonaSelect = document.getElementById('modal-zona');
 
-    if (role === 'super_admin') {
+    if (role === 'super_admin' || role === 'moderator') {
         zonaField.style.opacity = '0.4';
         zonaSelect.required = false;
+        zonaSelect.value = ''; // Reset zona for global roles
     } else {
         zonaField.style.opacity = '1';
         zonaSelect.required = true;
@@ -245,6 +267,8 @@ function setupUserForm() {
         const role = document.getElementById('modal-role').value;
         const zona_id = document.getElementById('modal-zona').value;
 
+        const permissions = Array.from(document.querySelectorAll('.perm-checkbox:checked')).map(cb => cb.value);
+
         if (!name || !email || !role) {
             Toast.warning('Mohon lengkapi semua field.');
             return;
@@ -260,12 +284,27 @@ function setupUserForm() {
             return;
         }
 
+        let finalRole = role;
+        let finalPermissions = [...permissions];
+
+        // Handle Moderator bypass (save as super_admin + flag)
+        if (role === 'moderator') {
+            finalRole = 'super_admin';
+            if (!finalPermissions.includes('IS_MODERATOR')) {
+                finalPermissions.push('IS_MODERATOR');
+            }
+        } else {
+            // Remove flag if not moderator anymore
+            finalPermissions = finalPermissions.filter(p => p !== 'IS_MODERATOR');
+        }
+
         const userData = {
             name,
             email,
             contact_email,
-            role,
-            zona_id: role === 'super_admin' ? null : parseInt(zona_id)
+            role: finalRole,
+            zona_id: (finalRole === 'super_admin' || finalRole === 'moderator') ? null : parseInt(zona_id),
+            permissions: finalPermissions
         };
 
         console.log('[DEBUG] Saving User Data:', userData);
@@ -358,8 +397,8 @@ function renderLoginHistory() {
             <td class="text-xs text-gray-400">${formatDateTime(log.created_at)}</td>
             <td>
                 <div class="flex items-center gap-3">
-                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(log.users?.name || '?')}&background=1e293b&color=cbd5e1" class="w-7 h-7 rounded-full">
-                    <span class="font-medium text-gray-300 text-sm">${log.users?.name || 'Unknown User'}</span>
+                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(log.users?.name || '?')}&background=1e293b&color=cbd5e1" class="w-7 h-7 rounded-full ring-1 ring-white/10">
+                    <span class="font-semibold text-gray-200 text-sm">${log.users?.name || 'System'}</span>
                 </div>
             </td>
             <td>${roleBadge}</td>
@@ -444,10 +483,10 @@ function renderActivityLogs() {
             <td class="text-xs text-gray-400">${formatDateTime(log.created_at)}</td>
             <td>
                 <div class="flex items-center gap-3">
-                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(log.users?.name || '?')}&background=1e293b&color=cbd5e1" class="w-7 h-7 rounded-full">
+                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(log.users?.name || '?')}&background=1e293b&color=cbd5e1" class="w-7 h-7 rounded-full ring-1 ring-white/5">
                     <div class="flex flex-col">
-                        <span class="font-medium text-gray-300 text-sm">${log.users?.name || 'Unknown User'}</span>
-                        ${roleBadge}
+                        <span class="font-semibold text-gray-200 text-sm">${log.users?.name || 'System'}</span>
+                        <div class="scale-90 origin-left">${roleBadge}</div>
                     </div>
                 </div>
             </td>

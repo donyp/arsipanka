@@ -3,6 +3,7 @@
 // ============================================================
 
 let deletedFiles = [];
+let selectedIds = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     const user = await initAuth('super_admin');
@@ -41,7 +42,8 @@ function renderTrash(displayFiles = deletedFiles) {
     tbody.innerHTML = displayFiles.map(f => `
         <tr class="animate-fade-in group hover:bg-white/5 transition-colors">
             <td>
-                <input type="checkbox" data-id="${f.id}" onclick="updateBulkSelection()"
+                <input type="checkbox" data-id="${f.id}" onclick="toggleItemSelection('${f.id}', this)"
+                    ${selectedIds.includes(f.id) ? 'checked' : ''}
                     class="row-checkbox w-4 h-4 rounded border-white/10 bg-white/5 text-red-500 focus:ring-red-500 cursor-pointer">
             </td>
             <td>
@@ -52,7 +54,7 @@ function renderTrash(displayFiles = deletedFiles) {
                         </svg>
                     </div>
                     <div>
-                        <p class="text-sm font-medium text-gray-300">${truncate(f.nama_file, 40)}</p>
+                        <p class="text-sm font-medium text-gray-300">${truncate(f.nama_file.toUpperCase(), 40)}</p>
                         <p class="text-[10px] text-gray-600">${f.storage_path}</p>
                     </div>
                 </div>
@@ -60,10 +62,10 @@ function renderTrash(displayFiles = deletedFiles) {
             <td><span class="badge ${getCategoryColor(f.category)}">${getCategoryLabel(f.category)}</span></td>
             <td>
                 <div class="flex items-center gap-2">
-                    <div class="w-5 h-5 rounded-full bg-gray-700 flex items-center justify-center text-[8px] font-bold text-gray-400 uppercase">
-                        ${(f.users?.name || '?')[0]}
+                    <div class="w-5 h-5 rounded-full bg-indigo-500/10 flex items-center justify-center text-[8px] font-bold text-indigo-400 uppercase border border-indigo-500/20">
+                        ${(f.users?.name || 'A')[0]}
                     </div>
-                    <span class="text-sm text-gray-400">${f.users?.name || 'Unknown'}</span>
+                    <span class="text-sm font-medium text-gray-300">${f.users?.name || 'Admin (System)'}</span>
                 </div>
             </td>
             <td class="text-xs text-gray-500">${new Date(f.deleted_at).toLocaleString('id-ID')}</td>
@@ -79,7 +81,7 @@ function renderTrash(displayFiles = deletedFiles) {
             </td>
         </tr>
     `).join('');
-    updateBulkSelection(); // Reset buttons if any
+    updateBulkUI(); // Reset buttons if any
 }
 
 async function restoreFile(id, name) {
@@ -122,10 +124,51 @@ async function emptyTrash() {
     }, 'Kosongkan');
 }
 
-function toggleSelectAll(checkbox) {
+function toggleSelectAll(master) {
+    if (master.checked) {
+        selectedIds = deletedFiles.map(f => f.id);
+    } else {
+        selectedIds = [];
+    }
+
     const checkboxes = document.querySelectorAll('.row-checkbox');
-    checkboxes.forEach(cb => cb.checked = checkbox.checked);
-    updateBulkSelection();
+    checkboxes.forEach(cb => cb.checked = master.checked);
+    updateBulkUI();
+}
+
+function toggleItemSelection(id, cb) {
+    if (cb.checked) {
+        if (!selectedIds.includes(id)) selectedIds.push(id);
+    } else {
+        selectedIds = selectedIds.filter(sid => sid !== id);
+        const master = document.getElementById('select-all');
+        if (master) master.checked = false;
+    }
+    updateBulkUI();
+}
+
+function updateBulkUI() {
+    const bar = document.getElementById('bulk-action-bar');
+    const countEl = document.getElementById('selected-count');
+    if (!bar || !countEl) return;
+
+    if (selectedIds.length > 0) {
+        bar.classList.add('active');
+        countEl.textContent = selectedIds.length;
+    } else {
+        bar.classList.remove('active');
+        const master = document.getElementById('select-all');
+        if (master) master.checked = false;
+    }
+}
+
+function clearSelection() {
+    selectedIds = [];
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    const master = document.getElementById('select-all');
+    if (master) master.checked = false;
+    updateBulkUI();
 }
 
 function searchTrash(query) {
@@ -143,48 +186,50 @@ function searchTrash(query) {
     renderTrash(filtered);
 }
 
-function updateBulkSelection() {
-    const checkboxes = document.querySelectorAll('.row-checkbox');
-    const checked = Array.from(checkboxes).filter(cb => cb.checked);
-    const bulkBtn = document.getElementById('bulk-delete-btn');
-    const countDisplay = document.getElementById('selected-count');
-    const selectAll = document.getElementById('select-all');
+async function bulkDeleteSelected() {
+    if (selectedIds.length === 0) return;
 
-    if (countDisplay) countDisplay.textContent = checked.length;
-
-    if (checked.length > 0) {
-        bulkBtn.classList.remove('hidden');
-    } else {
-        bulkBtn.classList.add('hidden');
-    }
-
-    if (selectAll) {
-        selectAll.checked = checkboxes.length > 0 && checked.length === checkboxes.length;
-    }
-}
-
-async function deleteSelectedFiles() {
-    const checked = Array.from(document.querySelectorAll('.row-checkbox:checked'));
-    const ids = checked.map(cb => cb.getAttribute('data-id'));
-
-    if (ids.length === 0) return;
-
-    showConfirmModal('Hapus Terpilih', `Apakah Anda yakin ingin menghapus permanen ${ids.length} file yang dipilih?`, async () => {
+    showConfirmModal('Hapus Permanen', `Apakah Anda yakin ingin menghapus permanen ${selectedIds.length} file yang dipilih?`, async () => {
         try {
-            const btn = document.getElementById('bulk-delete-btn');
+            const btn = document.getElementById('btn-bulk-hard-delete');
+            const originalContent = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = 'Menghapus...';
 
-            await API.post('/api/files/bulk-trash-delete', { ids });
+            await API.post('/api/files/bulk-trash-delete', { ids: selectedIds });
 
-            Toast.success(`${ids.length} file dihapus permanen`);
+            Toast.success(`${selectedIds.length} file dihapus permanen`);
+            selectedIds = [];
             loadTrash();
         } catch (err) {
             Toast.error('Gagal menghapus masal: ' + err.message);
         } finally {
-            const btn = document.getElementById('bulk-delete-btn');
+            const btn = document.getElementById('btn-bulk-hard-delete');
             btn.disabled = false;
-            btn.innerHTML = 'Hapus Terpilih (<span id="selected-count">0</span>)';
         }
     }, 'HAPUS PERMANEN');
+}
+
+async function bulkRestoreSelected() {
+    if (selectedIds.length === 0) return;
+
+    showConfirmModal('Pulihkan Terpilih', `Kembalikan ${selectedIds.length} file yang dipilih ke arsip aktif?`, async () => {
+        try {
+            const btn = document.getElementById('btn-bulk-restore');
+            btn.disabled = true;
+            btn.innerHTML = 'Memulihkan...';
+
+            await API.post('/api/files/bulk-restore', { ids: selectedIds });
+
+            Toast.success(`${selectedIds.length} file dipulihkan`);
+            selectedIds = [];
+            loadTrash();
+        } catch (err) {
+            Toast.error('Gagal memulihkan masal: ' + err.message);
+        } finally {
+            const btn = document.getElementById('btn-bulk-restore');
+            btn.disabled = false;
+            btn.innerHTML = 'Pulihkan';
+        }
+    }, 'Pulihkan');
 }

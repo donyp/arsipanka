@@ -27,6 +27,11 @@ async function initAuth(requiredRole = null) {
             return null;
         }
 
+        // --- BYPASS CONSTRAINT CHECK: Elevate to moderator dynamically ---
+        if (user.permissions && user.permissions.includes('IS_MODERATOR')) {
+            user.role = 'moderator';
+        }
+
         currentUser = user;
 
     } catch (err) {
@@ -37,10 +42,19 @@ async function initAuth(requiredRole = null) {
     }
 
     // Role guard
-    if (requiredRole && currentUser.role !== requiredRole) {
-        Toast.error('Anda tidak memiliki akses ke halaman ini.');
-        setTimeout(() => window.location.href = 'dashboard.html', 1500);
-        return null;
+    if (requiredRole) {
+        let isAllowed = false;
+        if (requiredRole === 'super_admin' && (currentUser.role === 'super_admin' || currentUser.role === 'moderator')) {
+            isAllowed = true;
+        } else if (currentUser.role === requiredRole) {
+            isAllowed = true;
+        }
+
+        if (!isAllowed) {
+            Toast.error('Anda tidak memiliki akses ke halaman ini.');
+            setTimeout(() => window.location.href = 'dashboard.html', 1500);
+            return null;
+        }
     }
 
     updateUserUI();
@@ -108,18 +122,45 @@ function updateUserUI() {
 
     // Show/hide super admin elements
     document.querySelectorAll('[data-role="super_admin"]').forEach(el => {
-        el.style.display = currentUser.role === 'super_admin' ? '' : 'none';
+        el.style.display = (currentUser.role === 'super_admin' || currentUser.role === 'moderator') ? '' : 'none';
+    });
+
+    // Handle Granular Permissions
+    document.querySelectorAll('[data-permission]').forEach(el => {
+        const requiredPerm = el.getAttribute('data-permission');
+        const hasPerm = hasPermission(requiredPerm);
+        el.style.display = hasPerm ? '' : 'none';
     });
 
     // Hide elements only for admin zona
     document.querySelectorAll('[data-role="admin_zona"]').forEach(el => {
         el.style.display = currentUser.role === 'admin_zona' ? '' : 'none';
     });
+
+    // --- Admin Zona: Hide sidebar, expand main to full-width ---
+    if (currentUser.role === 'admin_zona') {
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.querySelector('main');
+        const headerLogout = document.getElementById('header-logout-btn');
+        if (sidebar) sidebar.style.display = 'none';
+        if (mainContent) {
+            mainContent.classList.remove('ml-64');
+            mainContent.style.marginLeft = '0';
+        }
+        if (headerLogout) headerLogout.classList.replace('hidden', 'flex');
+    }
 }
 
 // ---- Check if current user is Super Admin ----
 function isSuperAdmin() {
-    return currentUser?.role === 'super_admin';
+    return currentUser?.role === 'super_admin' || currentUser?.role === 'moderator';
+}
+
+function hasPermission(perm) {
+    if (!currentUser) return false;
+    if (currentUser.role === 'moderator') return true;
+    if (currentUser.role === 'super_admin' && perm !== 'manage_users') return true;
+    return currentUser.permissions && currentUser.permissions.includes(perm);
 }
 
 // ---- Helper: Get zone label from currentUser or zona list ----

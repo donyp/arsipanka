@@ -220,7 +220,16 @@ body {
     animation-delay: 0.2s;
 }
 
-/* ---- Sidebar ---- */
+/* ---- Sidebar Accessibility ---- */
+.no-sidebar #sidebar {
+    display: none !important;
+}
+
+.no-sidebar #main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+}
+
 .sidebar {
     transition: width 0.3s ease, transform 0.3s ease;
 }

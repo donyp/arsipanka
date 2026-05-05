@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 
 <head>
@@ -9,6 +9,20 @@
         rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/style.css">
+    <script>
+        // Anti-flash for Admin Zona (must be in head to avoid flicker)
+        (function () {
+            try {
+                const userData = localStorage.getItem('user_data');
+                if (userData) {
+                    const user = JSON.parse(userData);
+                    if (user.role === 'admin_zona') {
+                        document.documentElement.classList.add('no-sidebar');
+                    }
+                }
+            } catch (e) { }
+        })();
+    </script>
 </head>
 
 <body class="bg-animated min-h-screen text-gray-100 font-sans">
@@ -41,7 +55,7 @@
                     </svg>
                     Dashboard
                 </a>
-                <a href="upload.html" data-role="super_admin"
+                <a href="upload.html" data-permission="upload_single"
                     class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -49,7 +63,7 @@
                     </svg>
                     Upload Invoice Merah
                 </a>
-                <a href="piutang.html" data-role="super_admin"
+                <a href="piutang.html" data-permission="view_piutang"
                     class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -66,7 +80,7 @@
                     </svg>
                     Batch Upload (Soon)
                 </a>
-                <a href="users.html" data-role="super_admin"
+                <a href="users.html" data-permission="manage_users"
                     class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -74,7 +88,7 @@
                     </svg>
                     Manajemen User
                 </a>
-                <a href="tokos.html" data-role="super_admin"
+                <a href="tokos.html" data-permission="manage_toko"
                     class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -82,7 +96,7 @@
                     </svg>
                     Manajemen Toko
                 </a>
-                <a href="zonas.html" data-role="super_admin"
+                <a href="zonas.html" data-permission="manage_zonas"
                     class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group active text-white bg-white/10 ring-1 ring-white/10 shadow-lg">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -92,7 +106,7 @@
                     </svg>
                     Manajemen Zona
                 </a>
-                <a href="trash.html" data-role="super_admin"
+                <a href="trash.html" data-permission="restore_trash"
                     class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -107,7 +121,7 @@
                     <p class="text-[10px] text-gray-600 uppercase tracking-widest mt-3 mb-1">Tools</p>
                 </div>
 
-                <a href="ads-media.html" data-role="super_admin"
+                <a href="ads-media.html" data-permission="manage_media_ads"
                     class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all group">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"

@@ -7,8 +7,16 @@ let selectedFiles = [];
 
 // ---- Init ----
 document.addEventListener('DOMContentLoaded', async () => {
-    const user = await initAuth('super_admin');
+    const user = await initAuth();
     if (!user) return;
+
+    // Allow only authorized roles
+    const allowedRoles = ['super_admin', 'moderator', 'admin_zona'];
+    if (!allowedRoles.includes(user.role)) {
+        Toast.error('Akses ditolak.');
+        setTimeout(() => window.location.href = 'dashboard.html', 1500);
+        return;
+    }
 
     await loadAllTokos();
     setupDragDrop();
@@ -213,32 +221,48 @@ function updateFileUI() {
     dropZoneContent.classList.add('hidden');
     if (submitBtn) submitBtn.disabled = false;
 
-    listDisplay.innerHTML = selectedFiles.map((item, i) => `
-        <li class="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5 group">
-            <div class="flex items-center gap-3 overflow-hidden">
-                <div class="w-7 h-7 rounded bg-red-500/10 flex items-center justify-center shrink-0">
+    listDisplay.innerHTML = selectedFiles.map((item, i) => {
+        const tokoOptions = window._allTokos.map(t => `<option value="${t.id}" ${item.toko && item.toko.id === t.id ? 'selected' : ''}>${t.nama}</option>`).join('');
+
+        return `
+        <li class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 group hover:border-white/10 transition-all">
+            <div class="flex items-center gap-3 overflow-hidden flex-1">
+                <div class="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
                     <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                     </svg>
                 </div>
-                <div class="flex flex-col truncate">
-                    <p class="text-xs font-medium text-gray-300 truncate">${item.file.name}</p>
-                    <div class="flex items-center gap-4 text-[11px]">
-                        <span class="text-gray-500">🏪 ${item.toko ? item.toko.nama : '<span class="text-red-400">Toko tidak cocok</span>'}</span>
-                        <span class="text-gray-500">📅 ${item.date || '<span class="text-red-400">Tanggal tidak ditemukan</span>'}</span>
-                        <span class="px-2 py-0.5 rounded ${item.tipe_ppn === 'PPN' ? 'bg-blue-500/10 text-blue-400' : item.tipe_ppn === 'NON' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-500/10 text-gray-500'} font-bold">
+                <div class="flex flex-col truncate flex-1">
+                    <p class="text-xs font-medium text-gray-300 truncate mb-1.5">${item.file.name}</p>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <select onchange="setFileToko(${i}, this.value)" class="bg-[#0f172a] border border-white/10 text-gray-400 text-[10px] rounded px-2 py-1 outline-none focus:border-indigo-500/50">
+                            <option value="">-- Pilih Toko --</option>
+                            ${tokoOptions}
+                        </select>
+                        <span class="text-[10px] text-gray-500">📅 ${item.date || '<span class="text-red-400">?</span>'}</span>
+                        <span class="px-2 py-0.5 rounded text-[9px] ${item.tipe_ppn === 'PPN' ? 'bg-blue-500/10 text-blue-400' : item.tipe_ppn === 'NON' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-500/10 text-gray-500'} font-bold">
                             ${item.tipe_ppn || 'REGULAR'}
                         </span>
                     </div>
                 </div>
             </div>
-            <button type="button" onclick="removeFile(${i}, event)" class="p-1 text-gray-600 hover:text-red-400 transition-colors">
+            <button type="button" onclick="removeFile(${i}, event)" class="p-2 text-gray-600 hover:text-red-400 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
             </button>
-        </li>
-    `).join('');
+        </li>`;
+    }).join('');
+}
+
+function setFileToko(index, tokoId) {
+    if (!tokoId) {
+        selectedFiles[index].toko = null;
+    } else {
+        const toko = window._allTokos.find(t => t.id === tokoId);
+        selectedFiles[index].toko = toko;
+    }
+    updateFileUI();
 }
 
 function formatFileSize(bytes) {
@@ -289,6 +313,9 @@ function setupForm() {
 
         const uploadTask = async (item) => {
             try {
+                // Ambil nilai nominal dari frontend
+                const nominalValue = document.getElementById('upload-nominal')?.value;
+
                 const formData = new FormData();
                 formData.append('file', item.file);
                 formData.append('zona_id', item.toko.zona_id);
@@ -296,6 +323,9 @@ function setupForm() {
                 formData.append('category', category);
                 formData.append('tanggal_dokumen', item.date);
                 formData.append('tipe_ppn', item.tipe_ppn || '');
+                if (nominalValue !== undefined && nominalValue !== '') {
+                    formData.append('total_jual', nominalValue);
+                }
                 formData.append('tanggal_upload', new Date().toISOString().split('T')[0]);
 
                 await API.upload('/api/files/upload', formData);
@@ -360,7 +390,7 @@ async function loadRecentUploads() {
                         </svg>
                     </div>
                     <div>
-                        <p class="text-sm font-medium text-gray-300">${a.nama_file}</p>
+                        <p class="text-sm font-medium text-gray-300">${a.nama_file.toUpperCase()}</p>
                         <p class="text-xs text-gray-500">${a.zonas?.nama || ''} • ${new Date(a.created_at).toLocaleDateString('id-ID')}</p>
                     </div>
                 </div>

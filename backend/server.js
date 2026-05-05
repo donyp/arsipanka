@@ -1,5 +1,5 @@
-// ============================================================
-// Arsip Digital Backend — JWT Auth + Rclone Storage
+﻿// ============================================================
+// Arsip Digital Backend â€” JWT Auth + Rclone Storage
 // ============================================================
 const express = require('express');
 const cors = require('cors');
@@ -79,6 +79,11 @@ function authenticateToken(req, res, next) {
         if (err) {
             return res.status(403).json({ error: 'Token tidak valid atau sudah expired.' });
         }
+        // --- BYPASS CONSTRAINT CHECK: Elevate to moderator dynamically ---
+        if (decoded.permissions && decoded.permissions.includes('IS_MODERATOR')) {
+            decoded.role = 'moderator';
+        }
+
         req.user = decoded;
 
         // Session Heartbeat (Asynchronous)
@@ -97,7 +102,7 @@ function authenticateToken(req, res, next) {
 }
 
 /**
- * RBAC Middleware — restrict routes to specific roles.
+ * RBAC Middleware â€” restrict routes to specific roles.
  */
 function authorizeRole(...allowedRoles) {
     return (req, res, next) => {
@@ -108,8 +113,27 @@ function authorizeRole(...allowedRoles) {
     };
 }
 
+// Granular Permission Middleware
+function requirePermission(perm) {
+    return (req, res, next) => {
+        if (req.user.role === 'moderator') return next();
+        if (req.user.role === 'super_admin' && perm !== 'manage_users') return next();
+        const perms = req.user.permissions || [];
+        if (perms.includes(perm)) return next();
+        return res.status(403).json({ error: `Akses ditolak. Dibutuhkan izin khusus: ${perm}` });
+    };
+}
+
+// Any Upload Permission Middleware
+function requireUploadPermission(req, res, next) {
+    if (req.user.role === 'moderator' || req.user.role === 'super_admin') return next();
+    const perms = req.user.permissions || [];
+    if (perms.includes('upload_single') || perms.includes('upload_batch')) return next();
+    return res.status(403).json({ error: 'Anda tidak memiliki akses untuk mengunggah file.' });
+}
+
 function authorizeZone(req, res, next) {
-    if (req.user.role === 'super_admin') return next(); // Super admin = bypass
+    if (req.user.role === 'moderator' || req.user.role === 'super_admin') return next(); // Bypass
 
     const requestedZona = req.query.zona_id || req.body?.zona_id || req.params?.zona_id;
     if (requestedZona && parseInt(requestedZona) !== req.user.zona_id) {
@@ -168,42 +192,42 @@ function sendWANotification(zonaId, details) {
             if (batch.length === 1) {
                 // Individual Professional Format
                 const d = batch[0];
-                message = `🔔 *PEMBERITAHUAN ARSIP BARU*
-━━━━━━━━━━━━━━━
-📅 *Waktu*: ${timestamp}
-🌍 *Zona*: ${zona.nama}
+                message = `ðŸ”” *PEMBERITAHUAN ARSIP BARU*
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
+ðŸ“… *Waktu*: ${timestamp}
+ðŸŒ *Zona*: ${zona.nama}
 
-🏪 *Nama Toko*: ${d.toko || 'Umum'}
-📄 *Nama File*: ${d.filename}
-🗓️ *Tgl Dokumen*: ${d.tanggal || '-'}
-📂 *Kategori*: ${d.kategori}
+ðŸª *Nama Toko*: ${d.toko || 'Umum'}
+ðŸ“„ *Nama File*: ${d.filename}
+ðŸ—“ï¸ *Tgl Dokumen*: ${d.tanggal || '-'}
+ðŸ“‚ *Kategori*: ${d.kategori}
 
-✅ *Status*: Berhasil diunggah ke Storage.
-━━━━━━━━━━━━━━━
+âœ… *Status*: Berhasil diunggah ke Storage.
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 _Silakan hubungi administrator jika ada kesalahan data._`;
             } else {
                 // Batch Professional Format
-                message = `📦 *RINGKASAN UPLOAD BATCH*
-━━━━━━━━━━━━━━━
-🌍 *Wilayah*: ${zona.nama}
-🔢 *Jumlah Dokumen*: ${batch.length} File
+                message = `ðŸ“¦ *RINGKASAN UPLOAD BATCH*
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
+ðŸŒ *Wilayah*: ${zona.nama}
+ðŸ”¢ *Jumlah Dokumen*: ${batch.length} File
 
 *Daftar Dokumen:*
-━━━━━━━━━━━━━━━
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 `;
                 // List items (limit to 12 for better mobile readability)
                 batch.slice(0, 12).forEach((item, idx) => {
                     const cleanFileName = item.filename.length > 25 ? item.filename.substring(0, 22) + '...' : item.filename;
-                    message += `▫️ *${item.toko}* » ${cleanFileName}\n`;
+                    message += `â–«ï¸ *${item.toko}* Â» ${cleanFileName}\n`;
                 });
 
                 if (batch.length > 12) {
                     message += `_... dan ${batch.length - 12} file lainnya_\n`;
                 }
 
-                message += `━━━━━━━━━━━━━━━
-🕒 *Selesai*: ${timestamp}
-✅ Dokumen telah aman diproses ke sistem.`;
+                message += `â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
+ðŸ•’ *Selesai*: ${timestamp}
+âœ… Dokumen telah aman diproses ke sistem.`;
             }
 
             console.log(`[WA] Sending batch to ${zona.wa_recipient} (${batch.length} files)...`);
@@ -296,7 +320,8 @@ app.post('/api/auth/login', async (req, res) => {
             email: user.email,
             role: user.role,
             zona_id: user.zona_id,
-            name: user.name
+            name: user.name,
+            permissions: user.permissions || []
         };
 
         const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
@@ -326,6 +351,8 @@ app.post('/api/auth/login', async (req, res) => {
             })
         });
 
+
+
         res.json({
             success: true,
             token,
@@ -344,7 +371,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-// POST /api/auth/logout (stateless — just for audit logging)
+// POST /api/auth/logout (stateless â€” just for audit logging)
 app.post('/api/auth/logout', authenticateToken, async (req, res) => {
     await supabase.from('audit_logs').insert({
         user_id: req.user.userId,
@@ -354,12 +381,12 @@ app.post('/api/auth/logout', authenticateToken, async (req, res) => {
     res.json({ success: true, message: 'Logged out.' });
 });
 
-// GET /api/auth/me — get current user info
+// GET /api/auth/me â€” get current user info
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
     try {
         const { data: user, error } = await supabase
             .from('users')
-            .select('id, email, contact_email, name, role, zona_id, toko_id, is_active, zonas(kode, nama)')
+            .select('id, email, contact_email, name, role, zona_id, toko_id, is_active, permissions, zonas(kode, nama)')
             .eq('id', req.user.userId)
             .single();
 
@@ -369,7 +396,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 
         res.json({ user });
 
-        // POST /api/logout — Terminate session
+        // POST /api/logout â€” Terminate session
         app.post('/api/logout', authenticateToken, async (req, res) => {
             try {
                 const { session_id } = req.body;
@@ -390,7 +417,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 // FILES ENDPOINTS
 // ============================================================
 
-// GET /api/files — list files (auto-filtered by zona for admin_zona)
+// GET /api/files â€” list files (auto-filtered by zona for admin_zona)
 app.get('/api/files', authenticateToken, authorizeZone, async (req, res) => {
     try {
         let query = supabase
@@ -439,8 +466,8 @@ app.get('/api/files', authenticateToken, authorizeZone, async (req, res) => {
     }
 });
 
-// GET /api/files/trash — list deleted files (Super Admin only)
-app.get('/api/files/trash', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// GET /api/files/trash — list deleted files
+app.get('/api/files/trash', authenticateToken, requirePermission('restore_trash'), async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('files')
@@ -449,14 +476,29 @@ app.get('/api/files/trash', authenticateToken, authorizeRole('super_admin'), asy
             .order('deleted_at', { ascending: false });
 
         if (error) throw error;
-        res.json({ files: data || [] });
+
+        // Fallback for "Unknown" if deleted_by is NULL or user deleted
+        const filesWithFallback = (data || []).map(f => {
+            let userName = 'Admin (System)';
+            if (f.users && f.users.name) {
+                userName = f.users.name;
+            }
+            return {
+                ...f,
+                display_name: userName, // Explicit helper field
+                users: f.users || { name: userName }
+            };
+        });
+
+        res.json({ files: filesWithFallback });
     } catch (err) {
         console.error('Trash List Error:', err);
         res.status(500).json({ error: 'Gagal memuat daftar sampah.' });
     }
 });
 
-// GET /api/files/:id/view — return file for PDF.js viewer
+
+// GET /api/files/:id/view â€” return file for PDF.js viewer
 app.get('/api/files/:id/view', authenticateToken, async (req, res) => {
     try {
         const { data: file, error } = await supabase
@@ -475,12 +517,21 @@ app.get('/api/files/:id/view', authenticateToken, async (req, res) => {
                 return res.status(403).json({ error: 'Anda tidak memiliki akses ke file ini.' });
             }
             if (file.category === 'PIUTANG') {
-                return res.status(403).json({ error: 'Anda tidak memiliki akses ke kategori Piutang.' });
+                const userPerms = req.user.permissions || [];
+                if (!userPerms.includes('view_piutang')) {
+                    return res.status(403).json({ error: 'Anda tidak memiliki akses ke kategori Piutang.' });
+                }
             }
         }
 
         // Download from Rclone to temp, then stream to client
-        const localPath = await RcloneStorage.download(file.storage_path);
+        let localPath;
+        try {
+            localPath = await RcloneStorage.download(file.storage_path);
+        } catch (downloadErr) {
+            console.error(`[Rclone Download Error] Path: ${file.storage_path}`, downloadErr);
+            return res.status(500).json({ error: 'Gagal mendownload file dari storage.' });
+        }
 
         // Mark as read
         await supabase.from('files').update({ status: 'Read' }).eq('id', file.id);
@@ -492,23 +543,36 @@ app.get('/api/files/:id/view', authenticateToken, async (req, res) => {
             context: `Viewed ${file.nama_file}`
         });
 
-        res.setHeader('Content-Type', 'application/pdf');
+        // Dynamic Mime Type handling
+        const ext = file.nama_file.split('.').pop().toLowerCase();
+        let mimeType = 'application/octet-stream';
+        if (ext === 'pdf') mimeType = 'application/pdf';
+        else if (['jpg', 'jpeg', 'jpe'].includes(ext)) mimeType = 'image/jpeg';
+        else if (ext === 'png') mimeType = 'image/png';
+        else if (ext === 'gif') mimeType = 'image/gif';
+        else if (ext === 'webp') mimeType = 'image/webp';
+
+        res.setHeader('Content-Type', mimeType);
         res.setHeader('Content-Disposition', `inline; filename="${file.nama_file}"`);
 
         const stream = fs.createReadStream(localPath);
         stream.pipe(res);
         stream.on('end', () => {
             // Cleanup temp
-            try { fs.unlinkSync(localPath); } catch (_) { }
+            setTimeout(() => {
+                try {
+                    if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
+                } catch (_) { }
+            }, 1000); // Small delay to ensure stream is fully closed
         });
 
     } catch (err) {
-        console.error('View File Error:', err);
-        res.status(500).json({ error: 'Gagal menampilkan file.' });
+        console.error('View File Absolute Error:', err);
+        res.status(500).json({ error: 'Gagal menampilkan file: ' + err.message });
     }
 });
 
-// GET /api/files/:id/download — download file
+// GET /api/files/:id/download â€” download file
 app.get('/api/files/:id/download', authenticateToken, async (req, res) => {
     try {
         const { data: file, error } = await supabase
@@ -527,7 +591,10 @@ app.get('/api/files/:id/download', authenticateToken, async (req, res) => {
                 return res.status(403).json({ error: 'Anda tidak memiliki akses ke file ini.' });
             }
             if (file.category === 'PIUTANG') {
-                return res.status(403).json({ error: 'Anda tidak memiliki akses ke kategori Piutang.' });
+                const userPerms = req.user.permissions || [];
+                if (!userPerms.includes('view_piutang')) {
+                    return res.status(403).json({ error: 'Anda tidak memiliki akses ke kategori Piutang.' });
+                }
             }
         }
 
@@ -564,8 +631,8 @@ app.get('/api/files/download/:id', authenticateToken, (req, res) => {
     res.redirect(`/api/files/${req.params.id}/download?token=${req.query.token}`);
 });
 
-// POST /api/files/upload — Super Admin only
-app.post('/api/files/upload', authenticateToken, authorizeRole('super_admin'), upload.single('file'), async (req, res) => {
+// POST /api/files/upload
+app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Tidak ada file yang diupload.' });
@@ -576,16 +643,17 @@ app.post('/api/files/upload', authenticateToken, authorizeRole('super_admin'), u
             return res.status(400).json({ error: 'zona_id wajib diisi.' });
         }
 
-        // Get zona kode
-        const { data: zona } = await supabase.from('zonas').select('kode').eq('id', parseInt(zona_id)).single();
+        // Parallelize Zona/Toko lookups
+        const [zonaRes, tokoRes] = await Promise.all([
+            supabase.from('zonas').select('kode').eq('id', parseInt(zona_id)).single(),
+            toko_id ? supabase.from('toko').select('kode').eq('id', parseInt(toko_id)).single() : Promise.resolve({ data: null })
+        ]);
+
+        const zona = zonaRes.data;
         if (!zona) return res.status(400).json({ error: 'Zona tidak ditemukan.' });
 
-        // Get toko kode (optional)
         let tokoKode = 'umum';
-        if (toko_id) {
-            const { data: toko } = await supabase.from('toko').select('kode').eq('id', parseInt(toko_id)).single();
-            if (toko) tokoKode = toko.kode;
-        }
+        if (tokoRes.data) tokoKode = tokoRes.data.kode;
 
         // Validate Date (tanggal_dokumen)
         if (req.body.tanggal_dokumen) {
@@ -594,15 +662,6 @@ app.post('/api/files/upload', authenticateToken, authorizeRole('super_admin'), u
                 return res.status(400).json({ error: 'Format tanggal_dokumen tidak valid atau tidak terbaca kalender.' });
             }
         }
-
-        // Upload via Rclone
-        const { storagePath, size } = await RcloneStorage.upload(
-            req.file.buffer,
-            req.file.originalname,
-            zona.kode,
-            tokoKode,
-            category || 'PPN'
-        );
 
         // --- Duplicate Detection (Nama File + Zona) ---
         const { data: existingFile } = await supabase
@@ -617,6 +676,15 @@ app.post('/api/files/upload', authenticateToken, authorizeRole('super_admin'), u
         if (existingFile) {
             return res.status(409).json({ error: 'File dengan nama yang sama sudah ada di zona ini.' });
         }
+
+        // Upload via Rclone
+        const { storagePath, size } = await RcloneStorage.upload(
+            req.file.buffer,
+            req.file.originalname,
+            zona.kode,
+            tokoKode,
+            category || 'PPN'
+        );
 
         // Insert metadata into DB
         const { data: fileRecord, error: dbError } = await supabase
@@ -673,9 +741,16 @@ app.post('/api/files/upload', authenticateToken, authorizeRole('super_admin'), u
     }
 });
 
-// DELETE /api/files/:id — Super Admin only
-app.delete('/api/files/:id', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// DELETE /api/files/:id
+app.delete('/api/files/:id', authenticateToken, async (req, res) => {
     try {
+        const isHardDelete = req.query.hard === 'true';
+        if (req.user.role !== 'super_admin') {
+            const perms = req.user.permissions || [];
+            if (isHardDelete && !perms.includes('hard_delete')) return res.status(403).json({ error: 'Akses ditolak. Butuh izin Hapus Permanen.' });
+            if (!isHardDelete && !perms.includes('soft_delete')) return res.status(403).json({ error: 'Akses ditolak. Butuh izin Buang Ke Sampah.' });
+        }
+
         const { data: file, error } = await supabase
             .from('files')
             .select('*')
@@ -687,7 +762,6 @@ app.delete('/api/files/:id', authenticateToken, authorizeRole('super_admin'), as
         }
 
         // Soft delete (set deleted_at)
-        const isHardDelete = req.query.hard === 'true';
 
         if (isHardDelete) {
             // Delete from storage
@@ -724,8 +798,67 @@ app.delete('/api/files/:id', authenticateToken, authorizeRole('super_admin'), as
     }
 });
 
-// POST /api/files/bulk-trash-delete — bulk permanent delete
-app.post('/api/files/bulk-trash-delete', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// POST /api/files/bulk-delete - bulk soft delete
+app.post('/api/files/bulk-delete', authenticateToken, requirePermission('soft_delete'), async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: 'Tidak ada file yang dipilih.' });
+        }
+
+        const now = new Date().toISOString();
+        const { error } = await supabase
+            .from('files')
+            .update({ deleted_at: now })
+            .in('id', ids);
+
+        if (error) throw error;
+
+        // Audit log
+        await supabase.from('audit_logs').insert({
+            user_id: req.user.userId,
+            action: 'Bulk Soft Delete',
+            context: `Moved ${ids.length} files to trash`
+        });
+
+        res.json({ success: true, message: `${ids.length} file dipindahkan ke sampah.` });
+    } catch (err) {
+        console.error('Bulk Soft Delete Error:', err);
+        res.status(500).json({ error: 'Terjadi kesalahan pada server.' });
+    }
+});
+
+// POST /api/files/bulk-restore - bulk restore from trash
+app.post('/api/files/bulk-restore', authenticateToken, requirePermission('restore_trash'), async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: 'ID tidak valid.' });
+        }
+
+        const { error } = await supabase
+            .from('files')
+            .update({ deleted_at: null })
+            .in('id', ids);
+
+        if (error) throw error;
+
+        // Audit
+        await supabase.from('audit_logs').insert({
+            user_id: req.user.userId,
+            action: 'Bulk Restore',
+            context: `Restored ${ids.length} files from trash`
+        });
+
+        res.json({ success: true, message: `${ids.length} file berhasil dipulihkan.` });
+    } catch (err) {
+        console.error('Bulk Restore Error:', err);
+        res.status(500).json({ error: 'Gagal memulihkan file massal.' });
+    }
+});
+
+// POST /api/files/bulk-trash-delete - bulk permanent delete
+app.post('/api/files/bulk-trash-delete', authenticateToken, requirePermission('hard_delete'), async (req, res) => {
     try {
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -774,7 +907,7 @@ app.post('/api/files/bulk-trash-delete', authenticateToken, authorizeRole('super
     }
 });
 
-// PUT /api/files/:id/restore — Super Admin only
+// PUT /api/files/:id/restore â€” Super Admin only
 app.put('/api/files/:id/restore', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
     try {
         const { error } = await supabase
@@ -799,9 +932,16 @@ app.put('/api/files/:id/restore', authenticateToken, authorizeRole('super_admin'
     }
 });
 
-// POST /api/files/bulk-download — Download multiple files as ZIP
+// POST /api/files/bulk-download â€” Download multiple files as ZIP
 app.post('/api/files/bulk-download', authenticateToken, async (req, res) => {
     try {
+        if (req.user.role !== 'super_admin') {
+            const perms = req.user.permissions || [];
+            if (!perms.includes('bulk_download')) {
+                return res.status(403).json({ error: 'Akses ditolak. Dibutuhkan izin Unduh ZIP Massal.' });
+            }
+        }
+
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ error: 'Tidak ada file yang dipilih.' });
@@ -817,11 +957,15 @@ app.post('/api/files/bulk-download', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'File tidak ditemukan.' });
         }
 
-        // 1b. Post-fetch security filter (Piutang only for Super Admin)
+        // 1b. Post-fetch security filter (Piutang only for Super Admin or view_piutang)
         const allowedFiles = files.filter(f => {
             if (req.user.role === 'admin_zona') {
-                // Must be same zone AND NOT Piutang
-                return (f.zona_id === req.user.zona_id) && (f.category !== 'PIUTANG');
+                if (f.zona_id !== req.user.zona_id) return false;
+                if (f.category === 'PIUTANG') {
+                    const userPerms = req.user.permissions || [];
+                    if (!userPerms.includes('view_piutang')) return false;
+                }
+                return true;
             }
             return true; // Super Admin can access all
         });
@@ -846,20 +990,23 @@ app.post('/api/files/bulk-download', authenticateToken, async (req, res) => {
 
         const localPaths = [];
 
-        // 3. Add each file to ZIP
-        for (const file of allowedFiles) {
+        // 3. Add files to ZIP in parallel (concurrency limit)
+        // We use a simple parallel map with a concurrency of 3
+        const downloadFile = async (file) => {
             try {
-                console.log(`[Bulk Download] Downloading: ${file.nama_file}`);
-                // Download from Rclone/Terabox to temp local
                 const localPath = await RcloneStorage.download(file.storage_path);
                 localPaths.push(localPath);
-
-                console.log(`[Bulk Download] Finalizing path for ${file.nama_file}: ${localPath}`);
-                // Append to zip
                 archive.file(localPath, { name: file.nama_file });
             } catch (err) {
-                console.warn(`[Bulk Download] Failed to add ${file.nama_file}:`, err.message);
+                console.warn(`[Bulk Download] Failed to download ${file.nama_file}:`, err.message);
             }
+        };
+
+        // Process in chunks of 4 for better speed without overbalancing local temp size
+        const concurrency = 4;
+        for (let i = 0; i < allowedFiles.length; i += concurrency) {
+            const chunk = allowedFiles.slice(i, i + concurrency);
+            await Promise.all(chunk.map(f => downloadFile(f)));
         }
 
         // 4. Cleanup on finish
@@ -887,11 +1034,11 @@ app.post('/api/files/bulk-download', authenticateToken, async (req, res) => {
 // ============================================================
 
 // GET /api/users
-app.get('/api/users', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+app.get('/api/users', authenticateToken, requirePermission('manage_users'), async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('users')
-            .select('id, email, contact_email, name, role, zona_id, toko_id, is_active, created_at, zonas(kode, nama)')
+            .select('id, email, contact_email, name, role, zona_id, toko_id, is_active, permissions, created_at, zonas(kode, nama)')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -901,10 +1048,10 @@ app.get('/api/users', authenticateToken, authorizeRole('super_admin'), async (re
     }
 });
 
-// POST /api/users — create user
-app.post('/api/users', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// POST /api/users â€” create user
+app.post('/api/users', authenticateToken, requirePermission('manage_users'), async (req, res) => {
     try {
-        const { email, contact_email, password, name, role, zona_id, toko_id } = req.body;
+        const { email, contact_email, password, name, role, zona_id, toko_id, permissions } = req.body;
 
         if (!email || !password || !name || !role) {
             return res.status(400).json({ error: 'Username, password, nama, dan role wajib diisi.' });
@@ -930,7 +1077,8 @@ app.post('/api/users', authenticateToken, authorizeRole('super_admin'), async (r
                 role,
                 zona_id: role === 'admin_zona' ? zona_id : null,
                 toko_id: role === 'admin_zona' ? toko_id : null,
-                is_active: true
+                is_active: true,
+                permissions: permissions || []
             })
             .select()
             .single();
@@ -950,10 +1098,10 @@ app.post('/api/users', authenticateToken, authorizeRole('super_admin'), async (r
     }
 });
 
-// PUT /api/users/:id — update user
-app.put('/api/users/:id', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// PUT /api/users/:id â€” update user
+app.put('/api/users/:id', authenticateToken, requirePermission('manage_users'), async (req, res) => {
     try {
-        const { email, contact_email, password, name, role, zona_id, toko_id, is_active } = req.body;
+        const { email, contact_email, password, name, role, zona_id, toko_id, is_active, permissions } = req.body;
 
         const updates = {};
         if (email) updates.email = email.toLowerCase().trim();
@@ -963,6 +1111,7 @@ app.put('/api/users/:id', authenticateToken, authorizeRole('super_admin'), async
         if (typeof is_active === 'boolean') updates.is_active = is_active;
         if (zona_id !== undefined) updates.zona_id = zona_id;
         if (toko_id !== undefined) updates.toko_id = toko_id;
+        if (permissions !== undefined) updates.permissions = permissions;
 
         // Re-hash password if provided
         if (password) {
@@ -991,8 +1140,8 @@ app.put('/api/users/:id', authenticateToken, authorizeRole('super_admin'), async
     }
 });
 
-// DELETE /api/users/:id — Permanent Delete (Super Admin only)
-app.delete('/api/users/:id', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// DELETE /api/users/:id â€” Permanent Delete
+app.delete('/api/users/:id', authenticateToken, requirePermission('manage_users'), async (req, res) => {
     try {
         const userIdToDelete = req.params.id;
 
@@ -1025,7 +1174,7 @@ app.delete('/api/users/:id', authenticateToken, authorizeRole('super_admin'), as
 // OPERATIONAL FEATURES (Broadcast & Stats)
 // ============================================================
 
-// POST /api/broadcasts — Send broadcast (Super Admin only)
+// POST /api/broadcasts â€” Send broadcast (Super Admin only)
 app.post('/api/broadcasts', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
     try {
         const { content, target_zona_id } = req.body;
@@ -1047,7 +1196,7 @@ app.post('/api/broadcasts', authenticateToken, authorizeRole('super_admin'), asy
     }
 });
 
-// GET /api/broadcasts — Fetch all broadcasts (Super Admin only)
+// GET /api/broadcasts â€” Fetch all broadcasts (Super Admin only)
 app.get('/api/broadcasts', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -1062,7 +1211,7 @@ app.get('/api/broadcasts', authenticateToken, authorizeRole('super_admin'), asyn
     }
 });
 
-// GET /api/broadcasts — Fetch all broadcasts (Super Admin only)
+// GET /api/broadcasts â€” Fetch all broadcasts (Super Admin only)
 console.log('Registering GET /api/broadcasts');
 app.get('/api/broadcasts', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
     try {
@@ -1078,7 +1227,7 @@ app.get('/api/broadcasts', authenticateToken, authorizeRole('super_admin'), asyn
     }
 });
 
-// DELETE /api/broadcasts/:id — Delete broadcast (Super Admin only)
+// DELETE /api/broadcasts/:id â€” Delete broadcast (Super Admin only)
 console.log('Registering DELETE /api/broadcasts/:id');
 app.delete('/api/broadcasts/:id', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
     try {
@@ -1117,9 +1266,25 @@ app.get('/api/broadcasts/latest', authenticateToken, async (req, res) => {
     }
 });
 
-// GET /api/stats/storage — Total Storage (Super Admin only)
-app.get('/api/stats/storage', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// TEMPORARY: Fix NULL ukuran_bytes for existing files
+app.get('/api/debug/fix-sizes', async (req, res) => {
     try {
+        const { data, error } = await supabase
+            .from('files')
+            .update({ ukuran_bytes: 524288 }) // 512KB default
+            .is('ukuran_bytes', null);
+
+        if (error) throw error;
+        res.json({ message: 'Fixed NULL sizes', data });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/stats/storage — storage usage statistics
+app.get('/api/stats/storage', authenticateToken, async (req, res) => {
+    try {
+        console.log('[STATS] Fetching storage stats for user:', req.user.userId);
         // Today's start in local time (then to UTC-like ISO)
         const todayStr = new Date().toISOString().split('T')[0];
 
@@ -1129,8 +1294,14 @@ app.get('/api/stats/storage', authenticateToken, authorizeRole('super_admin'), a
             .select('ukuran_bytes')
             .is('deleted_at', null);
 
-        if (errTotal) throw errTotal;
+        if (errTotal) {
+            console.error('[STATS] Error fetching total files:', errTotal);
+            throw errTotal;
+        }
+
+        console.log(`[STATS] Found ${allFiles.length} active files.`);
         const totalUsed = allFiles.reduce((sum, f) => sum + (f.ukuran_bytes || 0), 0);
+        console.log(`[STATS] Total bytes calculated: ${totalUsed}`);
 
         // 2. Today's Bytes
         const { data: todayFiles, error: errToday } = await supabase
@@ -1139,8 +1310,12 @@ app.get('/api/stats/storage', authenticateToken, authorizeRole('super_admin'), a
             .gte('created_at', todayStr)
             .is('deleted_at', null);
 
-        if (errToday) throw errToday;
+        if (errToday) {
+            console.error('[STATS] Error fetching today files:', errToday);
+            throw errToday;
+        }
         const todayUsed = todayFiles.reduce((sum, f) => sum + (f.ukuran_bytes || 0), 0);
+        console.log(`[STATS] Today's bytes calculated: ${todayUsed}`);
 
         res.json({
             total_bytes: totalUsed,
@@ -1153,8 +1328,79 @@ app.get('/api/stats/storage', authenticateToken, authorizeRole('super_admin'), a
     }
 });
 
-// GET /api/admin/login-history — Super Admin only
-app.get('/api/admin/login-history', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// GET /api/stats/chart — Invoice Analytics (Zone-Aware)
+app.get('/api/stats/chart', authenticateToken, async (req, res) => {
+    try {
+        const chartData = {};
+        const isZoneAdmin = req.user.role === 'admin_zona';
+        const userZonaId = req.user.zona_id;
+
+        // 1. Fetch zones — admin_zona only gets their own zone
+        let zonaQuery = supabase.from('zonas').select('id, nama').order('kode');
+        if (isZoneAdmin && userZonaId) {
+            zonaQuery = zonaQuery.eq('id', userZonaId);
+        }
+        const { data: allZonas, error: zError } = await zonaQuery;
+        if (!zError && allZonas) {
+            for (const z of allZonas) {
+                chartData[z.nama] = 0;
+            }
+        }
+
+        // 2. Fetch INVOICE files — filtered by zone for admin_zona
+        let fileQuery = supabase
+            .from('files')
+            .select('total_jual, category, nama_file, zona_id, zonas(nama)')
+            .is('deleted_at', null)
+            .eq('category', 'INVOICE');
+
+        if (isZoneAdmin && userZonaId) {
+            fileQuery = fileQuery.eq('zona_id', userZonaId);
+        }
+
+        const { data, error } = await fileQuery;
+
+        if (error) throw error;
+        console.log(`[DEBUG_CHART] Fetched ${data?.length || 0} invoice files.`);
+        if (data && data.length > 0) {
+            console.log(`[DEBUG_CHART] First row:`, data[0]);
+        }
+
+        // Grouping by Zone
+        const invoiceFiles = data || [];
+        for (const row of invoiceFiles) {
+            let zName = row.zonas?.nama || 'Unknown Zone';
+            let value = parseFloat(row.total_jual) || 0;
+
+            // --- Filename Parser Fallback ---
+            if (value === 0 && row.nama_file) {
+                const priceMatch = row.nama_file.match(/(\d{1,3}(\.\d{3})+)/);
+                if (priceMatch) {
+                    const cleanValue = priceMatch[0].replace(/\./g, '');
+                    value = parseFloat(cleanValue) || 0;
+                }
+            }
+
+            if (chartData[zName] !== undefined) {
+                chartData[zName] += value;
+            } else {
+                chartData[zName] = value;
+            }
+        }
+
+        const labels = Object.keys(chartData);
+        const values = Object.values(chartData);
+        console.log(`[DEBUG_CHART] Result:`, chartData);
+
+        res.json({ labels, values });
+    } catch (err) {
+        console.error('Chart Data Error:', err);
+        res.status(500).json({ error: 'Gagal memuat analitik visual.' });
+    }
+});
+
+// GET /api/admin/login-history
+app.get('/api/admin/login-history', authenticateToken, requirePermission('view_activity_logs'), async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('audit_logs')
@@ -1178,8 +1424,8 @@ app.get('/api/admin/login-history', authenticateToken, authorizeRole('super_admi
     }
 });
 
-// GET /api/admin/activity-logs — Super Admin only
-app.get('/api/admin/activity-logs', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// GET /api/admin/activity-logs
+app.get('/api/admin/activity-logs', authenticateToken, requirePermission('view_activity_logs'), async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('audit_logs')
@@ -1214,8 +1460,8 @@ app.get('/api/zonas', authenticateToken, async (req, res) => {
     res.json({ zonas: data });
 });
 
-// PUT /api/zonas/:id — Update zone settings (Super Admin only)
-app.put('/api/zonas/:id', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// PUT /api/zonas/:id â€” Update zone settings
+app.put('/api/zonas/:id', authenticateToken, requirePermission('manage_zonas'), async (req, res) => {
     try {
         const { nama, wa_recipient } = req.body;
         const { error } = await supabase
@@ -1234,9 +1480,14 @@ app.put('/api/zonas/:id', authenticateToken, authorizeRole('super_admin'), async
 app.get('/api/toko', authenticateToken, async (req, res) => {
     try {
         let query = supabase.from('toko').select('*').order('nama');
-        if (req.query.zona_id) {
+
+        // Security: admin_zona only sees shops in their zone
+        if (req.user.role === 'admin_zona') {
+            query = query.eq('zona_id', req.user.zona_id);
+        } else if (req.query.zona_id) {
             query = query.eq('zona_id', parseInt(req.query.zona_id));
         }
+
         const { data, error } = await query;
         if (error) throw error;
         res.json({ toko: data });
@@ -1245,8 +1496,8 @@ app.get('/api/toko', authenticateToken, async (req, res) => {
     }
 });
 
-// POST /api/toko — Create new shop (Super Admin only)
-app.post('/api/toko', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// POST /api/toko â€” Create new shop
+app.post('/api/toko', authenticateToken, requirePermission('manage_toko'), async (req, res) => {
     try {
         const { kode, nama, zona_id } = req.body;
         if (!kode || !nama || !zona_id) {
@@ -1266,8 +1517,8 @@ app.post('/api/toko', authenticateToken, authorizeRole('super_admin'), async (re
     }
 });
 
-// PUT /api/toko/:id — Update shop (Super Admin only)
-app.put('/api/toko/:id', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// PUT /api/toko/:id â€” Update shop
+app.put('/api/toko/:id', authenticateToken, requirePermission('manage_toko'), async (req, res) => {
     try {
         const { kode, nama, zona_id } = req.body;
         const { error } = await supabase
@@ -1282,8 +1533,8 @@ app.put('/api/toko/:id', authenticateToken, authorizeRole('super_admin'), async 
     }
 });
 
-// DELETE /api/toko/:id — Delete shop (Super Admin only)
-app.delete('/api/toko/:id', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// DELETE /api/toko/:id â€” Delete shop
+app.delete('/api/toko/:id', authenticateToken, requirePermission('manage_toko'), async (req, res) => {
     try {
         // Check if shop still has files linked
         const { count, error: checkError } = await supabase
@@ -1309,28 +1560,12 @@ app.delete('/api/toko/:id', authenticateToken, authorizeRole('super_admin'), asy
 });
 
 // ============================================================
-// FILES — Recycle bin (Super Admin only)
-// ============================================================
-app.get('/api/files/trash', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('files')
-            .select('*, zonas(kode, nama), toko(kode, nama)')
-            .not('deleted_at', 'is', null)
-            .order('deleted_at', { ascending: false });
-
-        if (error) throw error;
-        res.json({ files: data || [] });
-    } catch (err) {
-        res.status(500).json({ error: 'Gagal memuat recycle bin.' });
-    }
-});
 
 // ============================================================
 // MEDIA CATEGORIES ENDPOINTS (Super Admin only)
 // ============================================================
 
-// GET /api/media-categories — list all categories
+// GET /api/media-categories â€” list all categories
 app.get('/api/media-categories', authenticateToken, async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -1345,8 +1580,8 @@ app.get('/api/media-categories', authenticateToken, async (req, res) => {
     }
 });
 
-// POST /api/media-categories — create new category
-app.post('/api/media-categories', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// POST /api/media-categories â€” create new category
+app.post('/api/media-categories', authenticateToken, requirePermission('manage_media_ads'), async (req, res) => {
     try {
         const { nama, emoji, deskripsi, warna } = req.body;
         if (!nama) return res.status(400).json({ error: 'Nama kategori wajib diisi.' });
@@ -1357,7 +1592,7 @@ app.post('/api/media-categories', authenticateToken, authorizeRole('super_admin'
             .from('media_categories')
             .insert({
                 nama: slug,
-                emoji: emoji || '📁',
+                emoji: emoji || 'ðŸ“',
                 deskripsi: deskripsi || '',
                 warna: warna || 'gray'
             })
@@ -1379,7 +1614,7 @@ app.post('/api/media-categories', authenticateToken, authorizeRole('super_admin'
         await supabase.from('audit_logs').insert({
             user_id: req.user.userId,
             action: 'Create Media Category',
-            context: `Created category: ${slug} (${emoji || '📁'})`
+            context: `Created category: ${slug} (${emoji || 'ðŸ“'})`
         });
 
         res.json({ success: true, category: data });
@@ -1389,8 +1624,8 @@ app.post('/api/media-categories', authenticateToken, authorizeRole('super_admin'
     }
 });
 
-// DELETE /api/media-categories/:id — delete category
-app.delete('/api/media-categories/:id', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// DELETE /api/media-categories/:id â€” delete category
+app.delete('/api/media-categories/:id', authenticateToken, requirePermission('manage_media_ads'), async (req, res) => {
     try {
         const { error } = await supabase
             .from('media_categories')
@@ -1407,8 +1642,8 @@ app.delete('/api/media-categories/:id', authenticateToken, authorizeRole('super_
 // ADS MEDIA ENDPOINTS (Super Admin only)
 // ============================================================
 
-// GET /api/ads-media — list all media
-app.get('/api/ads-media', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// GET /api/ads-media â€” list all media
+app.get('/api/ads-media', authenticateToken, requirePermission('manage_media_ads'), async (req, res) => {
     try {
         const { category, search } = req.query;
         let query = supabase
@@ -1433,8 +1668,8 @@ app.get('/api/ads-media', authenticateToken, authorizeRole('super_admin'), async
     }
 });
 
-// POST /api/ads-media/upload — upload media file
-app.post('/api/ads-media/upload', authenticateToken, authorizeRole('super_admin'), uploadMediaMulter.single('file'), async (req, res) => {
+// POST /api/ads-media/upload â€” upload media file
+app.post('/api/ads-media/upload', authenticateToken, requirePermission('manage_media_ads'), uploadMediaMulter.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Tidak ada file yang diupload.' });
@@ -1477,7 +1712,7 @@ app.post('/api/ads-media/upload', authenticateToken, authorizeRole('super_admin'
     }
 });
 
-// GET /api/ads-media/:id/view — view/stream media file (inline)
+// GET /api/ads-media/:id/view â€” view/stream media file (inline)
 app.get('/api/ads-media/:id/view', async (req, res) => {
     try {
         // We allow viewing without token if token is in query (for <img> tags)
@@ -1534,7 +1769,7 @@ app.get('/api/ads-media/:id/view', async (req, res) => {
     }
 });
 
-// GET /api/ads-media/:id/download — download media file
+// GET /api/ads-media/:id/download â€” download media file
 app.get('/api/ads-media/:id/download', authenticateToken, async (req, res) => {
     try {
         const { data: media, error } = await supabase
@@ -1574,8 +1809,8 @@ app.get('/api/ads-media/:id/download', authenticateToken, async (req, res) => {
     }
 });
 
-// DELETE /api/ads-media/bulk — bulk soft delete
-app.delete('/api/ads-media/bulk', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// DELETE /api/ads-media/bulk â€” bulk soft delete
+app.delete('/api/ads-media/bulk', authenticateToken, requirePermission('manage_media_ads'), async (req, res) => {
     try {
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -1602,8 +1837,8 @@ app.delete('/api/ads-media/bulk', authenticateToken, authorizeRole('super_admin'
     }
 });
 
-// DELETE /api/ads-media/:id — soft delete
-app.delete('/api/ads-media/:id', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
+// DELETE /api/ads-media/:id â€” soft delete
+app.delete('/api/ads-media/:id', authenticateToken, requirePermission('manage_media_ads'), async (req, res) => {
     try {
         const { data: media, error: findErr } = await supabase
             .from('ads_media')
@@ -1662,8 +1897,9 @@ setInterval(async () => {
 }, 60 * 60 * 1000);
 
 app.listen(port, () => {
-    console.log(`🚀 Arsip Digital Backend v2.0 running on http://localhost:${port}`);
+    console.log(`ðŸš€ Arsip Digital Backend v2.0 running on http://localhost:${port}`);
     console.log(`   Auth: JWT (${JWT_EXPIRES_IN} expiry)`);
     console.log(`   Storage: Rclone (Terabox + Storj)`);
     console.log(`   DB: Supabase PostgreSQL`);
 });
+
