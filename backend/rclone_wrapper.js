@@ -60,12 +60,13 @@ const RcloneStorage = {
         const alistPath = '/terabox' + cleanPath;
         const alistDomain = 'http://127.0.0.1:5244';
 
+        const adminPassword = process.env.ALIST_ADMIN_PASSWORD || 'AdminArsip2026!';
         let token = alistTokenCache.token;
         if (!token || Date.now() > alistTokenCache.expiry) {
             const tokenResponse = await fetch(`${alistDomain}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: 'admin', password: 'AdminArsip2026!' })
+                body: JSON.stringify({ username: 'admin', password: adminPassword })
             });
             const tokenData = await tokenResponse.json();
             token = tokenData.data?.token;
@@ -107,7 +108,8 @@ const RcloneStorage = {
     async stream(storagePath) {
         const rawUrl = await this.getRawUrl(storagePath);
         console.log(`[Stream] Generating stream for: ${storagePath} via ${rawUrl.substring(0, 50)}...`);
-        const proc = rcloneSpawn(['cat', rawUrl]);
+        // Add flags for better reliability on signed URLs
+        const proc = rcloneSpawn(['cat', '--http-no-head', rawUrl]);
 
         // Log stderr for debugging
         let stderr = '';
@@ -152,13 +154,14 @@ const RcloneStorage = {
             const alistDomain = 'http://127.0.0.1:5244';
 
             // 1. Get Token (with caching)
+            const adminPassword = process.env.ALIST_ADMIN_PASSWORD || 'AdminArsip2026!';
             let token = alistTokenCache.token;
             if (!token || Date.now() > alistTokenCache.expiry) {
                 console.log(`[Upload] Alist Token expired or missing. Logging in...`);
                 const tokenResponse = await fetch(`${alistDomain}/api/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: 'admin', password: 'AdminArsip2026!' })
+                    body: JSON.stringify({ username: 'admin', password: adminPassword })
                 });
                 const tokenData = await tokenResponse.json();
                 token = tokenData.data?.token;
@@ -260,11 +263,12 @@ const RcloneStorage = {
 
             const alistDomain = 'http://127.0.0.1:5244';
 
-            // 1. Get Token
+            // 1. Get Token (with caching)
+            const adminPassword = process.env.ALIST_ADMIN_PASSWORD || 'AdminArsip2026!';
             const tokenResponse = await fetch(`${alistDomain}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: 'admin', password: 'AdminArsip2026!' })
+                body: JSON.stringify({ username: 'admin', password: adminPassword })
             });
             const tokenData = await tokenResponse.json();
             const token = tokenData.data?.token;
