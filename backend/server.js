@@ -941,8 +941,8 @@ app.all('/api/files/bulk-download', authenticateToken, async (req, res) => {
             }
         }
 
-        let { ids } = req.method === 'POST' ? req.body : req.query;
-        if (typeof ids === 'string') ids = ids.split(',');
+        let { ids } = (req.method === 'POST' || req.method === 'PUT') ? req.body : req.query;
+        if (typeof ids === 'string') ids = ids.split(',').map(id => id.trim());
 
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ error: 'Tidak ada file yang dipilih.' });
@@ -991,17 +991,31 @@ app.all('/api/files/bulk-download', authenticateToken, async (req, res) => {
         // 3. Add files to ZIP sequentially to prevent server overload
         for (const file of allowedFiles) {
             try {
+                console.log(`[ZIP] Processing: ${file.nama_file}`);
                 const fileStream = await RcloneStorage.getStream(file.storage_path);
 
                 archive.append(fileStream, { name: file.nama_file });
 
-                // Wait for this specific stream to finish before starting the next one
-                await new Promise((resolve, reject) => {
-                    fileStream.on('end', resolve);
-                    fileStream.on('error', reject);
+                // Wait for the entry to be fully processed by archiver
+                await new Promise((resolve) => {
+                    const timeout = setTimeout(() => {
+                        console.warn(`[ZIP] Timeout on ${file.nama_file}. Skipping...`);
+                        resolve();
+                    }, 60000); // 60s max per file
+
+                    archive.once('entry', () => {
+                        clearTimeout(timeout);
+                        resolve();
+                    });
+
+                    fileStream.on('error', (err) => {
+                        clearTimeout(timeout);
+                        console.error(`[ZIP] Stream error for ${file.nama_file}:`, err.message);
+                        resolve(); // Continue with next file
+                    });
                 });
             } catch (err) {
-                console.warn(`[Bulk Download] Failed to stream ${file.nama_file}:`, err.message);
+                console.warn(`[Bulk Download] Failed to initialize stream for ${file.nama_file}:`, err.message);
             }
         }
 

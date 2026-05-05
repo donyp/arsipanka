@@ -929,15 +929,24 @@ async function downloadSelected() {
             btn.innerHTML = '<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div><span>Zipping...</span>';
 
             const token = API.getToken();
-            const downloadUrl = `${CONFIG.API_URL}/api/files/bulk-download?ids=${selectedIds.join(',')}&token=${token}`;
+            const downloadUrl = `${CONFIG.API_URL}/api/files/bulk-download?token=${token}`;
 
-            // We use a direct link for ZIP to handle large streams better than fetch
-            const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.download = `arsip_batch_${new Date().getTime()}.zip`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            // We use a hidden form to send a large number of IDs via POST 
+            // while still allowing the browser to handle the resulting stream as a download.
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = downloadUrl;
+            form.style.display = 'none';
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids';
+            input.value = selectedIds.join(',');
+            form.appendChild(input);
+
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
 
             // Give it some time before resetting UI
             setTimeout(() => {
@@ -945,7 +954,7 @@ async function downloadSelected() {
                 btn.disabled = false;
                 btn.innerHTML = originalContent;
                 clearSelection();
-            }, 2000);
+            }, 3000);
             return; // Exit early as we handled everything
         }
     } catch (err) {
