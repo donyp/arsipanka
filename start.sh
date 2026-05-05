@@ -14,9 +14,10 @@ if [ -n "$ALIST_ADMIN_PASSWORD" ]; then
 fi
 alist server --data /app/data &
 
+# Setup Alist Storages via API (runs in background but has internal retry logic)
+echo "Running Alist API setup..."
+node setup_alist.js &
 
-# Give Alist time to start
-sleep 5
 
 # Start Node.js backend
 echo "Starting Node.js backend on port $PORT..."
