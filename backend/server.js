@@ -1749,7 +1749,7 @@ app.get('/api/ads-media/:id/view', async (req, res) => {
 
         fs.appendFileSync('debug_view_access.log', `${new Date().toISOString()} - ID: ${req.params.id} - Path: ${media.storage_path}\n`);
 
-        const rcloneProcess = RcloneStorage.stream(media.storage_path);
+        const rcloneProcess = await RcloneStorage.stream(media.storage_path);
         rcloneProcess.stdout.pipe(res);
 
         rcloneProcess.on('error', (err) => {

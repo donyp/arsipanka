@@ -48,23 +48,67 @@ function rcloneSpawn(args) {
 }
 
 const RcloneStorage = {
-    /**
-     * Stream a file from primary storage (Terabox) directly.
-     * Uses 'rclone cat' to output to stdout.
-     */
-    stream(storagePath) {
-        let cleanPath = storagePath.startsWith('/') ? storagePath.substring(1) : storagePath;
-
-        if (cleanPath.startsWith('ads-media/')) {
-            const parts = cleanPath.split('/');
+    async getRawUrl(storagePath) {
+        let cleanPath = storagePath.startsWith('/') ? storagePath : '/' + storagePath;
+        if (cleanPath.startsWith('/ads-media/')) {
+            const parts = cleanPath.substring(1).split('/');
             if (parts.length >= 3) {
-                cleanPath = parts.join('/');
+                cleanPath = '/' + parts.join('/');
             }
         }
 
-        const fullPath = PRIMARY_REMOTE + ':/' + cleanPath;
-        return rcloneSpawn(['cat', fullPath]);
+        const alistPath = '/terabox' + cleanPath;
+        const alistDomain = 'http://127.0.0.1:5244';
+
+        let token = alistTokenCache.token;
+        if (!token || Date.now() > alistTokenCache.expiry) {
+            const tokenResponse = await fetch(`${alistDomain}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'admin', password: 'AdminArsip2026!' })
+            });
+            const tokenData = await tokenResponse.json();
+            token = tokenData.data?.token;
+            if (!token) throw new Error('Alist login failed: ' + tokenData.message);
+            alistTokenCache = { token, expiry: Date.now() + 24 * 60 * 60 * 1000 };
+        }
+
+        const fsGetResponse = await fetch(`${alistDomain}/api/fs/get`, {
+            method: 'POST',
+            headers: {
+                'Authorization': token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ path: encodeURI(alistPath) }) // Use encodeURI for spaces
+        });
+        const fsGetData = await fsGetResponse.json();
+
+        // If encodeURI fails, try raw path (Alist handles it sometimes)
+        if (fsGetData.code !== 200 || !fsGetData.data) {
+            const fallbackRes = await fetch(`${alistDomain}/api/fs/get`, {
+                method: 'POST',
+                headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: alistPath })
+            });
+            const fallbackData = await fallbackRes.json();
+            if (fallbackData.code !== 200 || !fallbackData.data) {
+                throw new Error(`Alist Web API failed: ${fallbackData.message || fsGetData.message}`);
+            }
+            return fallbackData.data.raw_url;
+        }
+
+        return fsGetData.data.raw_url;
     },
+
+    /**
+     * Stream a file from primary storage (Terabox) directly.
+     * Uses 'rclone cat' with RAW URL to output to stdout.
+     */
+    async stream(storagePath) {
+        const rawUrl = await this.getRawUrl(storagePath);
+        return rcloneSpawn(['cat', rawUrl]);
+    },
+
 
     /**
      * Build the full remote path: terabox:/arsip/zona-01/toko-a/PPN/file.pdf
@@ -84,7 +128,7 @@ const RcloneStorage = {
     async upload(fileBuffer, originalName, zonaKode, tokoKode, category) {
         const storagePath = `${BASE_PATH}/${zonaKode}/${tokoKode}/${category}/${originalName}`;
 
-        
+
         try {
             console.log(`[Upload] Sending ${originalName} to Terabox via Alist API...`);
 
@@ -193,7 +237,7 @@ const RcloneStorage = {
     async uploadMedia(fileBuffer, originalName, category) {
         const storagePath = `/ads-media/${category}/${originalName}`;
 
-        
+
         try {
             console.log(`[Upload] Sending Media ${originalName} to Terabox via Alist API...`);
 
@@ -275,15 +319,13 @@ const RcloneStorage = {
         rcloneExec(['mkdir', backupDest]).catch(() => { });
     },
 
-    /**
-     * Stream/download a file from primary storage.
-     */
     async download(storagePath) {
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 
         const tempFilePath = path.join(tmpDir, `download-${Date.now()}-${path.basename(storagePath)}`);
-        await rcloneExec(['copyto', `${PRIMARY_REMOTE}:${storagePath}`, tempFilePath]);
+        const rawUrl = await this.getRawUrl(storagePath);
+        await rcloneExec(['copyurl', rawUrl, tempFilePath]);
         return tempFilePath;
     }
 };
