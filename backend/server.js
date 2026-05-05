@@ -931,8 +931,8 @@ app.put('/api/files/:id/restore', authenticateToken, authorizeRole('super_admin'
     }
 });
 
-// POST /api/files/bulk-download â€” Download multiple files as ZIP
-app.post('/api/files/bulk-download', authenticateToken, async (req, res) => {
+// GET/POST /api/files/bulk-download - Download multiple files as ZIP
+app.all('/api/files/bulk-download', authenticateToken, async (req, res) => {
     try {
         if (req.user.role !== 'super_admin') {
             const perms = req.user.permissions || [];
@@ -941,7 +941,9 @@ app.post('/api/files/bulk-download', authenticateToken, async (req, res) => {
             }
         }
 
-        const { ids } = req.body;
+        let { ids } = req.method === 'POST' ? req.body : req.query;
+        if (typeof ids === 'string') ids = ids.split(',');
+
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ error: 'Tidak ada file yang dipilih.' });
         }

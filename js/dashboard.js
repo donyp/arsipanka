@@ -928,29 +928,25 @@ async function downloadSelected() {
             // ZIP Bulk Download via Backend
             btn.innerHTML = '<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div><span>Zipping...</span>';
 
-            const token = localStorage.getItem('jwt_token');
-            const response = await fetch(`${CONFIG.API_URL}/api/files/bulk-download`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ ids: selectedIds })
-            });
+            const token = API.getToken();
+            const downloadUrl = `${CONFIG.API_URL}/api/files/bulk-download?ids=${selectedIds.join(',')}&token=${token}`;
 
-            if (!response.ok) throw new Error('Gagal membuat ZIP.');
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
+            // We use a direct link for ZIP to handle large streams better than fetch
             const a = document.createElement('a');
-            a.href = url;
+            a.href = downloadUrl;
             a.download = `arsip_batch_${new Date().getTime()}.zip`;
             document.body.appendChild(a);
             a.click();
-            window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
 
-            Toast.success('ZIP berhasil diunduh.');
+            // Give it some time before resetting UI
+            setTimeout(() => {
+                Toast.success('Proses ZIP dimulai. Tunggu hingga download selesai.');
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+                clearSelection();
+            }, 2000);
+            return; // Exit early as we handled everything
         }
     } catch (err) {
         console.error('Bulk Download Error:', err);
