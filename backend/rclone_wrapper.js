@@ -106,7 +106,24 @@ const RcloneStorage = {
      */
     async stream(storagePath) {
         const rawUrl = await this.getRawUrl(storagePath);
-        return rcloneSpawn(['cat', rawUrl]);
+        console.log(`[Stream] Generating stream for: ${storagePath} via ${rawUrl.substring(0, 50)}...`);
+        const proc = rcloneSpawn(['cat', rawUrl]);
+
+        // Log stderr for debugging
+        let stderr = '';
+        proc.stderr.on('data', (d) => {
+            stderr += d.toString();
+        });
+        proc.on('close', (code) => {
+            if (code !== 0) {
+                console.error(`[Rclone Stream Error] Code ${code}: ${stderr}`);
+                try {
+                    fs.appendFileSync(path.join(__dirname, 'debug_view_error.log'), `[${new Date().toISOString()}] Path: ${storagePath}, URL: ${rawUrl}, Error: ${stderr}\n`);
+                } catch (_) { }
+            }
+        });
+
+        return proc;
     },
 
 

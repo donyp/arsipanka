@@ -554,6 +554,9 @@ app.get('/api/files/:id/view', authenticateToken, async (req, res) => {
 
         res.setHeader('Content-Type', mimeType);
         res.setHeader('Content-Disposition', `inline; filename="${file.nama_file}"`);
+        if (file.ukuran_bytes) {
+            res.setHeader('Content-Length', file.ukuran_bytes);
+        }
 
         // Handle client disconnect: kill rclone to save bandwidth/process
         req.on('close', () => {
@@ -599,25 +602,29 @@ app.get('/api/files/:id/download', authenticateToken, async (req, res) => {
             }
         }
 
-        const localPath = await RcloneStorage.download(file.storage_path);
+        // Stream directly
+        let rcloneProcess;
+        try {
+            rcloneProcess = await RcloneStorage.stream(file.storage_path);
+        } catch (downloadErr) {
+            console.error(`[Rclone Stream Error] Path: ${file.storage_path}`, downloadErr);
+            return res.status(500).json({ error: 'Gagal mendownload file.' });
+        }
 
-        // Mark as read
-        await supabase.from('files').update({ status: 'Read' }).eq('id', file.id);
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${file.nama_file}"`);
+        if (file.ukuran_bytes) {
+            res.setHeader('Content-Length', file.ukuran_bytes);
+        }
 
-        // Audit
-        await supabase.from('audit_logs').insert({
-            user_id: req.user.userId,
-            action: 'Download File',
-            context: `Downloaded ${file.nama_file}`
+        req.on('close', () => {
+            if (rcloneProcess && rcloneProcess.kill) rcloneProcess.kill();
         });
 
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${file.nama_file}"`);
+        rcloneProcess.stdout.pipe(res);
 
-        const stream = fs.createReadStream(localPath);
-        stream.pipe(res);
-        stream.on('end', () => {
-            try { fs.unlinkSync(localPath); } catch (_) { }
+        rcloneProcess.on('error', (err) => {
+            console.error('[Rclone Stream Error]', err);
         });
 
     } catch (err) {
