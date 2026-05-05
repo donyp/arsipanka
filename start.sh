@@ -8,7 +8,12 @@ fi
 
 # Start Alist in the background
 echo "Starting Alist server..."
+if [ -n "$ALIST_ADMIN_PASSWORD" ]; then
+    echo "Setting Alist admin password..."
+    alist admin set "$ALIST_ADMIN_PASSWORD" --data /app/data
+fi
 alist server --data /app/data &
+
 
 # Give Alist time to start
 sleep 5
