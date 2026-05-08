@@ -193,8 +193,7 @@ function sendWANotification(zonaId, details) {
 
             // List items (limit to 12 for better mobile readability)
             batch.slice(0, 12).forEach((item) => {
-                const cleanFileName = item.filename.length > 25 ? item.filename.substring(0, 22) + '...' : item.filename;
-                message += `- [${item.toko || 'Umum'}] » ${cleanFileName}\n`;
+                message += `- [${item.toko || 'Umum'}] » ${item.filename}\n`;
             });
 
             if (batch.length > 12) {
@@ -228,7 +227,8 @@ Silahkan Cek Di:
                         },
                         body: JSON.stringify({
                             target: target,
-                            message: message
+                            message: message,
+                            link_preview: false
                         })
                     });
                 } catch (sendErr) {
