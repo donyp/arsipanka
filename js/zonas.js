@@ -89,9 +89,18 @@ function renderZonas() {
     }).join('');
 }
 
-// ---- Edit Zona Modal ----
+// ---- Modal Operations ----
+function openAddZonaModal() {
+    document.getElementById('edit-zona-id').value = '';
+    document.getElementById('modal-title').textContent = 'Tambah Zona Baru';
+    document.getElementById('modal-nama').value = '';
+    document.getElementById('modal-wa').value = '';
+    document.getElementById('zona-modal').classList.remove('hidden');
+}
+
 function editZona(zona) {
     document.getElementById('edit-zona-id').value = zona.id;
+    document.getElementById('modal-title').textContent = 'Edit Konfigurasi Zona';
     document.getElementById('modal-nama').value = zona.nama;
     document.getElementById('modal-wa').value = zona.wa_recipient || '';
     document.getElementById('zona-modal').classList.remove('hidden');
@@ -102,7 +111,7 @@ function closeZonaModal() {
     document.getElementById('zona-modal').classList.add('hidden');
 }
 
-// ---- Form Submit (Update via API) ----
+// ---- Form Submit (CRUD via API) ----
 function setupZonaForm() {
     const form = document.getElementById('zona-form');
     if (!form) return;
@@ -114,19 +123,26 @@ function setupZonaForm() {
         const nama = document.getElementById('modal-nama').value.trim();
         const wa_recipient = document.getElementById('modal-wa').value.trim();
 
-        if (!nama || !wa_recipient) {
-            Toast.warning('Mohon lengkapi semua field.');
+        if (!nama) {
+            Toast.warning('Nama Zona wajib diisi.');
             return;
         }
 
         try {
-            await API.put(`/api/zonas/${id}`, { nama, wa_recipient });
-            Toast.success('Konfigurasi zona berhasil diperbarui');
+            if (id) {
+                // UPDATE
+                await API.put(`/api/zonas/${id}`, { nama, wa_recipient });
+                Toast.success('Konfigurasi zona berhasil diperbarui');
+            } else {
+                // CREATE
+                await API.post('/api/zonas', { nama, wa_recipient });
+                Toast.success('Zona baru berhasil ditambahkan');
+            }
 
             closeZonaModal();
             await loadZonas();
         } catch (err) {
-            Toast.error('Gagal memperbarui zona: ' + err.message);
+            Toast.error('Gagal memproses data zona: ' + err.message);
         }
     });
 }

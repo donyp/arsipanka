@@ -1446,6 +1446,27 @@ app.get('/api/zonas', authenticateToken, async (req, res) => {
     res.json({ zonas: data });
 });
 
+// POST /api/zonas — Create new zone
+app.post('/api/zonas', authenticateToken, requirePermission('manage_zonas'), async (req, res) => {
+    try {
+        const { nama, wa_recipient } = req.body;
+        if (!nama) return res.status(400).json({ error: 'Nama Zona wajib diisi.' });
+
+        const kode = `ZONA-${Date.now().toString().slice(-4)}`;
+
+        const { data, error } = await supabase
+            .from('zonas')
+            .insert({ nama, wa_recipient, kode, deskripsi: `Zona ${nama}` })
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json({ success: true, message: 'Zona baru berhasil ditambahkan.', zona: data });
+    } catch (err) {
+        res.status(500).json({ error: 'Gagal menambahkan zona: ' + err.message });
+    }
+});
+
 // PUT /api/zonas/:id â€” Update zone settings
 app.put('/api/zonas/:id', authenticateToken, requirePermission('manage_zonas'), async (req, res) => {
     try {
