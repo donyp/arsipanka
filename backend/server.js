@@ -212,23 +212,30 @@ Silahkan Cek Di:
 
             console.log(`[WA] Sending batch to ${zona.wa_recipient} (${batch.length} files)...`);
 
-            const controller = new AbortController();
-            const fetchTimeout = setTimeout(() => controller.abort(), 8000); // 8s wait for API
+            const targets = zona.wa_recipient.split(',').map(t => t.trim()).filter(t => t);
+            
+            for (const target of targets) {
+                try {
+                    const controller = new AbortController();
+                    setTimeout(() => controller.abort(), 8000); 
 
-            const response = await fetch('https://api.fonnte.com/send', {
-                method: 'POST',
-                signal: controller.signal,
-                headers: {
-                    'Authorization': token,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    target: zona.wa_recipient,
-                    message: message
-                })
-            });
+                    const response = await fetch('https://api.fonnte.com/send', {
+                        method: 'POST',
+                        signal: controller.signal,
+                        headers: {
+                            'Authorization': token,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            target: target,
+                            message: message
+                        })
+                    });
+                } catch (sendErr) {
+                    console.error(`[WA] Failed to send to ${target}:`, sendErr.message);
+                }
+            }
 
-            clearTimeout(fetchTimeout);
             const result = await response.json();
             if (result.status) {
                 console.log(`[WA] Batch sent successfully! (Zone: ${zona.nama})`);
