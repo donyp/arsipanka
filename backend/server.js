@@ -152,10 +152,6 @@ const waTimeouts = {}; // { [zonaId]: timeoutRef }
  * Aggregates messages for 2 seconds before sending a summary.
  */
 function sendWANotification(zonaId, details) {
-    // Disabled permanently in code per user request
-    console.log('[WA] System is currently disabled in code.');
-    return;
-
     if (process.env.DISABLE_WA_NOTIFICATIONS === 'true') {
         console.log('[WA] Notifications are disabled.');
         return;
@@ -186,50 +182,33 @@ function sendWANotification(zonaId, details) {
 
             if (!zona || !zona.wa_recipient) return;
 
-            // Build Professional Message
-            const timestamp = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
-            let message = '';
+            // Build Professional Message from User Template
+            let message = `📂 *INVOICE MERAH SUDAH DI UPLOAD*
+━━━━━━━━━━━━━━━
+📍 *Zona:* ${zona.nama}
+🔢 *Total:* ${batch.length} File Baru
 
-            if (batch.length === 1) {
-                // Individual Professional Format
-                const d = batch[0];
-                message = `ðŸ”” *PEMBERITAHUAN ARSIP BARU*
-â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
-ðŸ“… *Waktu*: ${timestamp}
-ðŸŒ *Zona*: ${zona.nama}
-
-ðŸª *Nama Toko*: ${d.toko || 'Umum'}
-ðŸ“„ *Nama File*: ${d.filename}
-ðŸ—“ï¸ *Tgl Dokumen*: ${d.tanggal || '-'}
-ðŸ“‚ *Kategori*: ${d.kategori}
-
-âœ… *Status*: Berhasil diunggah ke Storage.
-â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
-_Silakan hubungi administrator jika ada kesalahan data._`;
-            } else {
-                // Batch Professional Format
-                message = `ðŸ“¦ *RINGKASAN UPLOAD BATCH*
-â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
-ðŸŒ *Wilayah*: ${zona.nama}
-ðŸ”¢ *Jumlah Dokumen*: ${batch.length} File
-
-*Daftar Dokumen:*
-â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
+*Daftar Dokumen Terbaru:*
 `;
-                // List items (limit to 12 for better mobile readability)
-                batch.slice(0, 12).forEach((item, idx) => {
-                    const cleanFileName = item.filename.length > 25 ? item.filename.substring(0, 22) + '...' : item.filename;
-                    message += `â–«ï¸ *${item.toko}* Â» ${cleanFileName}\n`;
-                });
 
-                if (batch.length > 12) {
-                    message += `_... dan ${batch.length - 12} file lainnya_\n`;
-                }
+            // List items (limit to 12 for better mobile readability)
+            batch.slice(0, 12).forEach((item) => {
+                const cleanFileName = item.filename.length > 25 ? item.filename.substring(0, 22) + '...' : item.filename;
+                message += `- [${item.toko || 'Umum'}] » ${cleanFileName}\n`;
+            });
 
-                message += `â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
-ðŸ•’ *Selesai*: ${timestamp}
-âœ… Dokumen telah aman diproses ke sistem.`;
+            if (batch.length > 12) {
+                message += `_... dan ${batch.length - 12} file lainnya._\n`;
             }
+
+            message += `
+✅ Seluruh dokumen telah berhasil di upload ke sistem kami.
+
+Silahkan Cek Di:
+🌐 https://arsip-anka.hf.space
+
+*Ini adalah pesan otomatis!*
+━━━━━━━━━━━━━━━`;
 
             console.log(`[WA] Sending batch to ${zona.wa_recipient} (${batch.length} files)...`);
 
