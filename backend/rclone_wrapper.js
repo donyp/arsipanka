@@ -63,25 +63,33 @@ const RcloneStorage = {
         const adminPassword = process.env.ALIST_ADMIN_PASSWORD || 'AdminArsip2026!';
         let token = alistTokenCache.token;
         if (!token || Date.now() > alistTokenCache.expiry) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 15000);
             const tokenResponse = await fetch(`${alistDomain}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: 'admin', password: adminPassword })
+                body: JSON.stringify({ username: 'admin', password: adminPassword }),
+                signal: controller.signal
             });
+            clearTimeout(timeout);
             const tokenData = await tokenResponse.json();
             token = tokenData.data?.token;
             if (!token) throw new Error('Alist login failed: ' + tokenData.message);
             alistTokenCache = { token, expiry: Date.now() + 24 * 60 * 60 * 1000 };
         }
 
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 15000);
         const fsGetResponse = await fetch(`${alistDomain}/api/fs/get`, {
             method: 'POST',
             headers: {
                 'Authorization': token,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ path: encodeURI(alistPath) }) // Use encodeURI for spaces
+            body: JSON.stringify({ path: encodeURI(alistPath) }),
+            signal: ctrl.signal
         });
+        clearTimeout(t);
         const fsGetData = await fsGetResponse.json();
 
         // If encodeURI fails, try raw path (Alist handles it sometimes)
@@ -109,7 +117,11 @@ const RcloneStorage = {
         const rawUrl = await this.getRawUrl(storagePath);
         console.log(`[Stream] Proxying raw URL: ${rawUrl.substring(0, 100)}...`);
 
-        const response = await fetch(rawUrl);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+
+        const response = await fetch(rawUrl, { signal: controller.signal });
+        clearTimeout(timeout);
         if (!response.ok) {
             throw new Error(`Failed to fetch raw URL: ${response.status} ${response.statusText}`);
         }
@@ -257,14 +269,18 @@ const RcloneStorage = {
             while (attempt < retries && !success) {
                 attempt++;
                 try {
+                    const c = new AbortController();
+                    const tt = setTimeout(() => c.abort(), 15000);
                     putResponse = await fetch(`${alistDomain}/api/fs/put`, {
                         method: 'PUT',
                         headers: {
                             'Authorization': token,
                             'File-Path': encodeURIComponent('/terabox' + storagePath)
                         },
-                        body: fileBuffer
+                        body: fileBuffer,
+                        signal: c.signal
                     });
+                    clearTimeout(tt);
 
                     putData = await putResponse.json();
                     if (putData.code === 200) {
@@ -489,11 +505,15 @@ const RcloneStorage = {
             alistTokenCache = { token, expiry: Date.now() + 24 * 60 * 60 * 1000 };
         }
 
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 15000);
         const listResponse = await fetch(`${alistDomain}/api/fs/list`, {
             method: 'POST',
             headers: { 'Authorization': token, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: alistPath, page: 1, per_page: 3000 })
+            body: JSON.stringify({ path: alistPath, page: 1, per_page: 3000 }),
+            signal: ctrl.signal
         });
+        clearTimeout(t);
 
         const listData = await listResponse.json();
         if (listData.code !== 200) {

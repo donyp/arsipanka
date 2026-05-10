@@ -2090,9 +2090,16 @@ app.get('/api/files/cleanup-scan', authenticateToken, async (req, res) => {
                 const filesOnStorage = await RcloneStorage.listFiles(dir);
                 data.storageItems = new Set(filesOnStorage.map(s => s.name));
             } catch (err) {
-                console.warn(`[Cleanup Scan] Skip folder ${dir} due to error:`, err.message);
-                // If folder listing fails (timeout), we assume files are still there to avoid false positives
-                data.storageItems = new Set(data.dbItems.map(d => d.nama_file));
+                const msg = err.message.toLowerCase();
+                console.warn(`[Cleanup Scan] Folder ${dir} error:`, err.message);
+
+                if (msg.includes('not found') || msg.includes('404')) {
+                    // Folder is GONE. All files inside are ghosts.
+                    data.storageItems = new Set();
+                } else {
+                    // Network timeout or other error. Skip to avoid false positives.
+                    data.storageItems = new Set(data.dbItems.map(d => d.nama_file));
+                }
             }
         }
 
