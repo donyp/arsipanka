@@ -2063,18 +2063,18 @@ app.get('/api/files/cleanup-scan', authenticateToken, async (req, res) => {
         // 1. Get all active files
         const { data: files, error } = await supabase
             .from('files')
-            .select('id, nama_file, storage_path, size, category, created_at, zona_id')
+            .select('id, nama_file, storage_path, ukuran_bytes, category, created_at, zona_id')
             .is('deleted_at', null);
 
         if (error) throw error;
 
         const results = {
-            duplicates: [], // Exactly same name + size
+            duplicates: [], // Exactly same name + ukuran_bytes
             ghosts: [],     // DB record exists but file is GONE on storage
             candidates: []  // Files with (1), (2), etc suffixes
         };
 
-        const fileMap = new Map(); // "name|size" -> id
+        const fileMap = new Map(); // "name|ukuran_bytes" -> id
 
         for (const f of files) {
             // A. Ghost Check
@@ -2085,7 +2085,7 @@ app.get('/api/files/cleanup-scan', authenticateToken, async (req, res) => {
             }
 
             // B. Duplicate Check
-            const key = `${f.nama_file}|${f.size}`;
+            const key = `${f.nama_file}|${f.ukuran_bytes}`;
             if (fileMap.has(key)) {
                 results.duplicates.push(f);
             } else {
