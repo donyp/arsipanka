@@ -229,16 +229,9 @@ async function uploadAllReady() {
     const btn = document.getElementById('btn-upload-all');
     btn.disabled = true;
 
-    // Create a batch session first
-    let currentBatchId = null;
-    try {
-        const batchRes = await API.post('/api/batches', {});
-        if (batchRes.batch) {
-            currentBatchId = batchRes.batch.id;
-        }
-    } catch (err) {
-        console.warn('[Batch] Could not create batch session:', err.message);
-    }
+    // Generate local UUID for this session (No pre-handshake needed)
+    const currentBatchId = self.crypto.randomUUID ? self.crypto.randomUUID() : 'b_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+    console.log(`[Batch] Session started locally: ${currentBatchId}`);
 
     let successCount = 0;
     for (const row of readyRows) {
@@ -277,7 +270,6 @@ async function uploadRow(row, batchId) {
             throw new Error(`Toko "${row.konsumen}" tidak ditemukan di database.`);
         }
 
-        formData.append('file', row.pdfFile);
         formData.append('zona_id', mappedToko.zona_id);
         formData.append('toko_id', mappedToko.id);
         formData.append('category', 'INVOICE');
@@ -285,6 +277,9 @@ async function uploadRow(row, batchId) {
         formData.append('no_invoice', row.no_invoice);
         formData.append('total_jual', row.total);
         if (batchId) formData.append('batch_id', batchId);
+
+        // IMPORTANT: Append file LAST so multer parses all text fields first
+        formData.append('file', row.pdfFile);
 
         const response = await fetch(`${CONFIG.API_URL}/api/files/upload`, {
             method: 'POST',

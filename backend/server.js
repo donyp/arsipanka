@@ -569,17 +569,49 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
         );
         const size = req.file.buffer.length;
 
-        // Ensure batch record exists if batch_id provided (Auto-Upsert)
-        if (req.body.batch_id) {
+        // --- RESILIENCE: Auto-Batching Fallback ---
+        let finalBatchId = req.body.batch_id;
+
+        if (!finalBatchId) {
+            // Find a batch for this user created in the last 60 seconds
+            const oneMinAgo = new Date(Date.now() - 60000).toISOString();
+            const { data: recentBatch } = await supabase
+                .from('upload_batches')
+                .select('id')
+                .eq('uploader_id', req.user.userId)
+                .gte('created_at', oneMinAgo)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (recentBatch) {
+                finalBatchId = recentBatch.id;
+                console.log(`[Auto-Batch] Grouping orphan file into existing batch: ${finalBatchId}`);
+            } else {
+                // Create a new one
+                const { data: newBatch } = await supabase
+                    .from('upload_batches')
+                    .insert({ uploader_id: req.user.userId, total_files: 0, success_files: 0 })
+                    .select('id')
+                    .single();
+                if (newBatch) {
+                    finalBatchId = newBatch.id;
+                    console.log(`[Auto-Batch] Created new fallback batch: ${finalBatchId}`);
+                }
+            }
+        } else {
+            // Ensure batch record exists if explicitly provided (Auto-Upsert)
             try {
                 await supabase.from('upload_batches').upsert({
-                    id: req.body.batch_id,
+                    id: finalBatchId,
                     uploader_id: req.user.userId,
-                    total_files: 0, // Will be updated by frontend at the end or left as is
+                    total_files: 0,
                     success_files: 0
                 }, { onConflict: 'id', ignoreDuplicates: true });
             } catch (err) {
                 console.warn('[Upload] Failed to auto-upsert batch record:', err.message);
+                // If upsert fails (e.g. invalid UUID format from fallback), we might want to null it?
+                // No, let's keep it and let the DB fail if it's really broken, so we know.
             }
         }
 
@@ -604,7 +636,7 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
                 category: category || 'PPN',
                 ukuran_bytes: size,
                 uploaded_by: req.user.userId,
-                batch_id: req.body.batch_id || null,
+                batch_id: finalBatchId,
                 tanggal_dokumen: req.body.tanggal_dokumen,
                 tipe_ppn: req.body.tipe_ppn,
                 no_invoice: req.body.no_invoice,
