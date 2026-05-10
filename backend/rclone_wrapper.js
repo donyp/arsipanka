@@ -145,10 +145,38 @@ const RcloneStorage = {
     },
 
     /**
-     * Upload a file buffer to primary storage (Terabox) and optional backup (Storj).
+     * Build the standard storage path synchronously
      */
-    async upload(fileBuffer, originalName, zonaKode, tokoKode, category) {
-        const storagePath = `${BASE_PATH}/${zonaKode}/${tokoKode}/${category}/${originalName}`;
+    buildStoragePath(zonaKode, tokoKode, category, originalName) {
+        return `${BASE_PATH}/${zonaKode}/${tokoKode}/${category}/${originalName}`;
+    },
+
+    /**
+     * Upload a file buffer to primary storage (Terabox) and optional backup (Storj) in the background.
+     * Keeps retrying infinitely if Terabox drops connection (TLS timeout).
+     */
+    async uploadInBackground(fileBuffer, originalName, zonaKode, tokoKode, category) {
+        const storagePath = this.buildStoragePath(zonaKode, tokoKode, category, originalName);
+
+        for (let masterAttempt = 1; masterAttempt <= 100; masterAttempt++) {
+            try {
+                console.log(`[Background Upload] Attempt ${masterAttempt} for ${originalName}...`);
+                await this.uploadDirect(fileBuffer, originalName, storagePath);
+                console.log(`[Background Upload] SUCCESS for ${originalName} after ${masterAttempt} attempts`);
+                return { storagePath, size: fileBuffer.length };
+            } catch (e) {
+                console.warn(`[Background Upload] Failed attempt ${masterAttempt} for ${originalName}:`, e.message);
+                // Wait 15 seconds before retrying
+                await new Promise(resolve => setTimeout(resolve, 15000));
+            }
+        }
+        console.error(`[Background Upload] GAVE UP on ${originalName} after 100 attempts!`);
+    },
+
+    /**
+     * The internal upload method
+     */
+    async uploadDirect(fileBuffer, originalName, storagePath) {
 
 
         try {

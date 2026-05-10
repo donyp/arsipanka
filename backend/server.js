@@ -560,16 +560,27 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
             return res.status(409).json({ error: 'File dengan nama yang sama sudah ada di zona ini.' });
         }
 
-        // Upload via Rclone
-        const { storagePath, size } = await RcloneStorage.upload(
-            req.file.buffer,
+        // Calculate Storage Path Instantly
+        const storagePath = RcloneStorage.buildStoragePath(
+            zona.kode,
+            tokoKode,
+            category || 'PPN',
+            req.file.originalname
+        );
+        const size = req.file.buffer.length;
+
+        // Background Upload (Fire and FORGET to unblock UI)
+        // Memory buffer is cloned implicitly by node/v8 so it won't be cleared when request ends
+        const fileBuffer = Buffer.from(req.file.buffer);
+        RcloneStorage.uploadInBackground(
+            fileBuffer,
             req.file.originalname,
             zona.kode,
             tokoKode,
             category || 'PPN'
-        );
+        ).catch(err => console.error("Critical background upload error:", err));
 
-        // Insert metadata into DB
+        // Insert metadata into DB immediately so it appears on dashboard/history
         const { data: fileRecord, error: dbError } = await supabase
             .from('files')
             .insert({
