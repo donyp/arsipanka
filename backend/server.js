@@ -571,35 +571,49 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
         );
         const size = req.file.buffer.length;
 
-        // --- RESILIENCE: Auto-Batching Fallback ---
+        // --- RESILIENCE: Auto-Batching Fallback with In-Memory Mutex ---
         let finalBatchId = req.body.batch_id;
 
         if (!finalBatchId) {
-            // Find a batch for this user created in the last 5 minutes (300000ms)
-            const fiveMinAgo = new Date(Date.now() - 300000).toISOString();
-            const { data: recentBatch } = await supabase
-                .from('upload_batches')
-                .select('id')
-                .eq('uploader_id', req.user.userId)
-                .gte('created_at', fiveMinAgo)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
+            // Use a per-user mutex to prevent race conditions during concurrent requests
+            if (!global.batchLocks) global.batchLocks = {};
+            const userLockKey = req.user.userId;
 
-            if (recentBatch) {
-                finalBatchId = recentBatch.id;
-                console.log(`[Auto-Batch] Grouping orphan file into existing batch: ${finalBatchId}`);
-            } else {
-                // Create a new one
-                const { data: newBatch } = await supabase
+            // If another request is already creating/finding a batch, wait for it
+            while (global.batchLocks[userLockKey]) {
+                await new Promise(r => setTimeout(r, 100));
+            }
+
+            global.batchLocks[userLockKey] = true;
+            try {
+                // Find a batch for this user created in the last 5 minutes
+                const fiveMinAgo = new Date(Date.now() - 300000).toISOString();
+                const { data: recentBatch } = await supabase
                     .from('upload_batches')
-                    .insert({ uploader_id: req.user.userId, total_files: 0, success_files: 0 })
                     .select('id')
-                    .single();
-                if (newBatch) {
-                    finalBatchId = newBatch.id;
-                    console.log(`[Auto-Batch] Created new fallback batch: ${finalBatchId}`);
+                    .eq('uploader_id', req.user.userId)
+                    .gte('created_at', fiveMinAgo)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (recentBatch) {
+                    finalBatchId = recentBatch.id;
+                    console.log(`[Auto-Batch] Grouping orphan file into existing batch: ${finalBatchId}`);
+                } else {
+                    // Create a new one
+                    const { data: newBatch } = await supabase
+                        .from('upload_batches')
+                        .insert({ uploader_id: req.user.userId, total_files: 0, success_files: 0 })
+                        .select('id')
+                        .single();
+                    if (newBatch) {
+                        finalBatchId = newBatch.id;
+                        console.log(`[Auto-Batch] Created new fallback batch: ${finalBatchId}`);
+                    }
                 }
+            } finally {
+                delete global.batchLocks[userLockKey];
             }
         } else {
             // Ensure batch record exists if explicitly provided (Auto-Upsert)
@@ -612,8 +626,6 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
                 }, { onConflict: 'id', ignoreDuplicates: true });
             } catch (err) {
                 console.warn('[Upload] Failed to auto-upsert batch record:', err.message);
-                // If upsert fails (e.g. invalid UUID format from fallback), we might want to null it?
-                // No, let's keep it and let the DB fail if it's really broken, so we know.
             }
         }
 

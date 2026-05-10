@@ -74,18 +74,24 @@ function processExcelData(json) {
     batchData = json.map((row, index) => {
         const keys = Object.keys(row);
 
-        // Exact match priority, then fuzzy
+        // Exact match priority, then fuzzy pattern inclusion
         const findKey = (patterns) => {
+            // 1. Try exact match first
             const exact = keys.find(k => patterns.some(p => k.toLowerCase() === p.toLowerCase()));
             if (exact) return exact;
-            return keys.find(k => patterns.some(p => k.toLowerCase().includes(p.toLowerCase())));
+
+            // 2. Try if column header CONTAINS any of our pattern keywords
+            return keys.find(k => {
+                const lowerK = k.toLowerCase();
+                return patterns.some(p => lowerK.includes(p.toLowerCase()));
+            });
         };
 
         const dateKey = findKey(['tanggal', 'date', 'tgl']);
-        const invKey = findKey(['faktur', 'invoice', 'no faktur', 'no_inv', 'no inv']);
-        const totalKey = findKey(['jumlah jual', 'jml jual', 'total jual', 'total amount', 'total', 'nominal', 'amount']);
-        const storeKey = findKey(['konsumen', 'nama toko', 'customer', 'customer name', 'toko']);
-        const methodKey = findKey(['metode bayar', 'metode', 'payment', 'bayar']);
+        const invKey = findKey(['faktur', 'invoice', 'no inv', 'no_inv', 'nomor inv']);
+        const totalKey = findKey(['total', 'nominal', 'amount', 'jumlah', 'tagihan', 'bayar', 'pembayaran']);
+        const storeKey = findKey(['konsumen', 'nama toko', 'customer', 'customer name', 'toko', 'outlet']);
+        const methodKey = findKey(['metode', 'payment', 'bayar', 'tunai', 'kredit']);
 
         // Improved Money Parsing (Handles Indonesian dots/commas & US formats)
         const parseMoney = (val) => {
