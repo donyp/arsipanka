@@ -2055,43 +2055,74 @@ setInterval(async () => {
     }
 }, 6 * 60 * 60 * 1000);
 
-// --- Business Intelligence Reports Endpoint ---
-app.get('/api/reports/stats', authenticateToken, async (req, res) => {
+// --- Smart Cleanup & Storage Optimizer Engine ---
+app.get('/api/files/cleanup-scan', authenticateToken, async (req, res) => {
     try {
+        console.log('[Cleanup Scan] Starting automated storage audit...');
+
+        // 1. Get all active files
         const { data: files, error } = await supabase
             .from('files')
-            .select('category, total_jual, created_at, zona_id, zonas(nama)')
+            .select('id, nama_file, storage_path, size, category, created_at, zona_id')
             .is('deleted_at', null);
 
         if (error) throw error;
 
-        const stats = {
-            total_invoice: 0,
-            total_piutang: 0,
-            total_amount: 0,
-            zona_dist: {},
-            category_counts: { INVOICE: 0, PIUTANG: 0 }
+        const results = {
+            duplicates: [], // Exactly same name + size
+            ghosts: [],     // DB record exists but file is GONE on storage
+            candidates: []  // Files with (1), (2), etc suffixes
         };
 
-        files.forEach(f => {
-            const amount = parseFloat(f.total_jual) || 0;
-            if (f.category === 'PIUTANG') {
-                stats.total_piutang += amount;
-                stats.category_counts.PIUTANG++;
-            } else {
-                stats.total_invoice += amount;
-                stats.category_counts.INVOICE++;
+        const fileMap = new Map(); // "name|size" -> id
+
+        for (const f of files) {
+            // A. Ghost Check
+            const exists = await RcloneStorage.checkFileExists(f.storage_path);
+            if (!exists) {
+                results.ghosts.push(f);
+                continue;
             }
-            stats.total_amount += amount;
 
-            const zonaName = f.zonas?.nama || 'Unknown';
-            stats.zona_dist[zonaName] = (stats.zona_dist[zonaName] || 0) + amount;
-        });
+            // B. Duplicate Check
+            const key = `${f.nama_file}|${f.size}`;
+            if (fileMap.has(key)) {
+                results.duplicates.push(f);
+            } else {
+                fileMap.set(key, f.id);
+            }
 
-        res.json(stats);
+            // C. Candidate Check (Names like "file (1).pdf")
+            if (/\(\d+\)\.pdf$/i.test(f.nama_file)) {
+                results.candidates.push(f);
+            }
+        }
+
+        res.json(results);
     } catch (err) {
-        console.error('Reports API Error:', err);
-        res.status(500).json({ error: 'Gagal memuat statistik laporan.' });
+        console.error('Cleanup Scan Error:', err);
+        res.status(500).json({ error: 'Gagal menjalankan audit pembersihan.' });
+    }
+});
+
+// Bulk Cleanup Action
+app.post('/api/files/cleanup-bulk', authenticateToken, async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: 'Data tidak valid.' });
+
+        console.log(`[Cleanup Bulk] Cleaning ${ids.length} records...`);
+
+        const { error } = await supabase
+            .from('files')
+            .update({ deleted_at: new Date() })
+            .in('id', ids);
+
+        if (error) throw error;
+        res.json({ success: true, count: ids.length });
+    } catch (err) {
+        console.error('Bulk Cleanup Error:', err);
+        res.status(500).json({ error: 'Gagal melakukan pembersihan massal.' });
     }
 });
 

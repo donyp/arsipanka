@@ -54,20 +54,20 @@ for (const file of htmlFiles) {
         // Manajemen (Users, Tokos, Zonas)
         content = content.replace(/(<a href="users\.html"[\s\S]*?<\/a>)/, '<p class="text-[10px] text-gray-600 uppercase tracking-widest mt-6 mb-1 px-4">Manajemen</p>\n            $1');
 
-        // Sistem (Trash)
-        content = content.replace(/(<a href="trash\.html"[\s\S]*?<\/a>)/, '<p class="text-[10px] text-gray-600 uppercase tracking-widest mt-6 mb-1 px-4">Sistem</p>\n            $1');
+        // Sistem (Trash + Cleanup)
+        content = content.replace(/(<a href="trash\.html"[\s\S]*?<\/a>)/, '<p class="text-[10px] text-gray-600 uppercase tracking-widest mt-6 mb-1 px-4">Sistem</p>\n            $1\n            <a href="cleanup.html" data-role="super_admin" class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">\n                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.051.046M15.571 8.572a2 2 0 011.022.547l2.387.477a6 6 0 013.86-.517l.318-.158a6 6 0 003.86-.517L20.95 8.79a2 2 0 011.051-.046M12 7v10m0 0l-1.5-1.5M12 17l1.5-1.5" /></svg>\n                Optimasi Penyimpanan\n            </a>');
 
-        // Laporan & Analitik (Reports)
-        content = content.replace(/(<a href="dashboard\.html"[\s\S]*?<\/a>)/, '$1\n            <p class="text-[10px] text-gray-600 uppercase tracking-widest mt-6 mb-1 px-4">Laporan & Analitik</p>\n            <a href="reports.html" data-role="super_admin" class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group text-gray-400 hover:text-white hover:bg-white/5">\n                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>\n                Laporan BI\n            </a>');
+        // Remove old Laporan & Analitik stuff
+        content = content.replace(/<p class="text-\[10px\] text-gray-600 uppercase tracking-widest mt-6 mb-1 px-4">Laporan & Analitik<\/p>/g, '');
+        content = content.replace(/<a href="reports\.html"[\s\S]*?<\/a>/g, '');
 
         // Ensure no duplicate headers or links if run twice
         const hd = 'text-\\[10px\\] text-gray-600 uppercase tracking-widest mt-[0-9] mb-1 px-4';
         content = content.replace(new RegExp(`(<p class="${hd}">Menu Utama<\/p>\\s*){2,}`, 'g'), '$1');
-        content = content.replace(new RegExp(`(<p class="${hd}">Laporan & Analitik<\/p>\\s*){2,}`, 'g'), '$1');
-        content = content.replace(new RegExp(`(<a href="reports\\.html"[\s\S]*?<\/a>\\s*){2,}`, 'g'), '$1');
         content = content.replace(new RegExp(`(<p class="${hd}">Upload<\/p>\\s*){2,}`, 'g'), '$1');
         content = content.replace(new RegExp(`(<p class="${hd}">Manajemen<\/p>\\s*){2,}`, 'g'), '$1');
         content = content.replace(new RegExp(`(<p class="${hd}">Sistem<\/p>\\s*){2,}`, 'g'), '$1');
+        content = content.replace(new RegExp(`(<a href="cleanup\\.html"[\s\S]*?<\/a>\\s*){2,}`, 'g'), '$1');
     }
 
     fs.writeFileSync(filePath, content);
