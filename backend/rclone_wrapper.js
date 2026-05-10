@@ -220,19 +220,41 @@ const RcloneStorage = {
                 }
             }
 
-            // 2. Put File directly via Alist API
-            const putResponse = await fetch(`${alistDomain}/api/fs/put`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': token,
-                    'File-Path': encodeURIComponent('/terabox' + storagePath)
-                },
-                body: fileBuffer
-            });
-            const putData = await putResponse.json();
-            if (putData.code !== 200) throw new Error('Alist API upload failed: ' + putData.message);
+            // 2. Put File directly via Alist API with Retry Mechanism
+            let putResponse, putData;
+            let success = false;
+            let retries = 3;
+            let attempt = 0;
 
-            console.log(`[Upload] Alist API upload success for: ${originalName}`);
+            while (attempt < retries && !success) {
+                attempt++;
+                try {
+                    putResponse = await fetch(`${alistDomain}/api/fs/put`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': token,
+                            'File-Path': encodeURIComponent('/terabox' + storagePath)
+                        },
+                        body: fileBuffer
+                    });
+
+                    putData = await putResponse.json();
+                    if (putData.code === 200) {
+                        success = true;
+                    } else {
+                        throw new Error(putData.message);
+                    }
+                } catch (err) {
+                    console.warn(`[Upload] Attempt ${attempt} failed for ${originalName}: ${err.message}`);
+                    if (attempt >= retries) {
+                        throw new Error(`Alist API upload failed after 3 attempts: ${err.message}`);
+                    }
+                    // Wait 2 seconds before retrying
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            }
+
+            console.log(`[Upload] Alist API upload success for: ${originalName} (Attempt ${attempt})`);
 
             // Backup to Storj (fire and forget via rcat)
             const backupDest = `${BACKUP_REMOTE}:${storagePath}`;
