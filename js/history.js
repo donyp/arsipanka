@@ -145,21 +145,47 @@ async function openNoticePanel(batchId) {
 }
 
 function generateWATemplate(zonaName, files) {
-    let msg = `📂 *INVOICE MERAH SUDAH DI UPLOAD*\n`;
+    // Determine Zona Number/Suffix from Name (e.g., "Zona 07" -> "07")
+    const zonaNum = zonaName.replace(/[^0-9A-Za-z]/g, ' ').replace('Zona', '').trim();
+
+    let msg = `📂 *UPDATE INVOICE ZONA ${zonaNum}*\n`;
     msg += `━━━━━━━━━━━━━━━\n`;
-    msg += `📍 *Zona:* ${zonaName}\n`;
-    msg += `🔢 *Total:* ${files.length} File Baru\n\n`;
+    msg += `🔢 *Total : ${files.length}*\n\n`;
     msg += `*Daftar Dokumen Terbaru:*\n`;
 
     files.forEach(f => {
-        msg += `- [${f.toko_nama}] » ${f.nama_file}\n`;
+        // Extract plain merchant name
+        const merchant = f.toko_nama || 'Umum';
+
+        // PPN Type (Use tipe_ppn if exists, else guess from category/filename)
+        const type = f.tipe_ppn || (f.category === 'NON_PPN' ? 'NON' : 'PPN');
+
+        // Formatted Nominal
+        const nominal = new Intl.NumberFormat('id-ID').format(f.total_jual || 0);
+
+        // Date String (Use actual doc date if available)
+        let dateStr = '';
+        if (f.tanggal_dokumen) {
+            const d = new Date(f.tanggal_dokumen);
+            if (!isNaN(d.getTime())) {
+                const months = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGT', 'SEP', 'OKT', 'NOV', 'DES'];
+                dateStr = `${d.getDate()} ${months[d.getMonth()]}`;
+            }
+        }
+
+        // If still no date, try to extract from filename (e.g., "30 APR")
+        if (!dateStr) {
+            const match = f.nama_file.match(/(\d{1,2})\s+(JAN|FEB|MAR|APR|MEI|JUN|JUL|AGT|SEP|OKT|NOV|DES)/i);
+            if (match) dateStr = match[0].toUpperCase();
+        }
+
+        msg += `- [${merchant}] ${type} ${nominal} ${dateStr || ''}\n`;
     });
 
-    msg += `\n✅ Seluruh dokumen telah berhasil di upload ke sistem kami.\n\n`;
+    msg += `\n✅ Dokumen diatas berhasil di upload ke sistem kami.\n\n`;
     msg += `Silahkan Cek Di:\n`;
-    msg += `🌐 https://arsip-anka.hf.space\n\n`;
-    msg += `*Ini adalah pesan otomatis!*\n`;
-    msg += `━━━━━━━━━━━━━━━`;
+    msg += `🌐 https://ankaindonesia-arsip.hf.space/\n\n`;
+    msg += `_Admin Anka_`;
 
     return msg;
 }

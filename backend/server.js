@@ -1479,7 +1479,7 @@ app.get('/api/batches/:id/details', authenticateToken, async (req, res) => {
     try {
         const { data: files, error } = await supabase
             .from('files')
-            .select('id, nama_file, zona_id, toko_id, category, no_invoice, total_jual, created_at')
+            .select('id, nama_file, zona_id, toko_id, category, no_invoice, total_jual, created_at, tipe_ppn, tanggal_dokumen')
             .eq('batch_id', req.params.id)
             .is('deleted_at', null)
             .order('zona_id');
