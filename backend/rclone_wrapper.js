@@ -351,6 +351,58 @@ const RcloneStorage = {
         const rawUrl = await this.getRawUrl(storagePath);
         await rcloneExec(['copyurl', rawUrl, tempFilePath]);
         return tempFilePath;
+    },
+
+    /**
+     * Delete a file from storage via Alist API (/api/fs/remove).
+     * @param {string} storagePath - e.g. "arsip/zona-01/toko-a/PPN/file.pdf"
+     */
+    async deleteFile(storagePath) {
+        let cleanPath = storagePath.startsWith('/') ? storagePath : '/' + storagePath;
+        const alistPath = '/terabox' + cleanPath;
+        const alistDomain = 'http://127.0.0.1:5244';
+        const adminPassword = process.env.ALIST_ADMIN_PASSWORD || 'AdminArsip2026!';
+
+        // Get or refresh Alist token
+        let token = alistTokenCache.token;
+        if (!token || Date.now() > alistTokenCache.expiry) {
+            const tokenResponse = await fetch(`${alistDomain}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'admin', password: adminPassword })
+            });
+            const tokenData = await tokenResponse.json();
+            token = tokenData.data?.token;
+            if (!token) throw new Error('Alist login failed: ' + tokenData.message);
+            alistTokenCache = { token, expiry: Date.now() + 24 * 60 * 60 * 1000 };
+        }
+
+        // Extract the directory and filename from the path
+        const dir = path.posix.dirname(alistPath);
+        const fileName = path.posix.basename(alistPath);
+
+        console.log(`[RcloneStorage] Deleting via Alist: dir="${dir}" file="${fileName}"`);
+
+        const deleteResponse = await fetch(`${alistDomain}/api/fs/remove`, {
+            method: 'POST',
+            headers: {
+                'Authorization': token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                dir: dir,
+                names: [fileName]
+            })
+        });
+
+        const deleteData = await deleteResponse.json();
+        if (deleteData.code !== 200) {
+            console.error(`[RcloneStorage] Alist delete failed:`, deleteData);
+            throw new Error(`Alist delete failed: ${deleteData.message || 'Unknown error'}`);
+        }
+
+        console.log(`[RcloneStorage] Successfully deleted: ${alistPath}`);
+        return true;
     }
 };
 
