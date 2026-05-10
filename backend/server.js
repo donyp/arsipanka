@@ -592,7 +592,8 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
         // --- RESILIENCE: Auto-Batching Fallback with In-Memory Mutex ---
         let finalBatchId = req.body.batch_id;
 
-        if (!finalBatchId) {
+        // Skip auto-batching for PIUTANG category
+        if (!finalBatchId && category !== 'PIUTANG') {
             console.log(`[Upload] File "${req.file.originalname}" arrived without batch_id. Finding/Creating...`);
             if (!global.batchLocks) global.batchLocks = {};
             const userLockKey = req.user.userId;
