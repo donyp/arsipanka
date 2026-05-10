@@ -119,8 +119,8 @@ function parseMetadataFromFilename(filename) {
     const name = filename.replace(/\.pdf$/i, '');
     let meta = { toko: '', total: 0, tanggal: '', no_invoice: '', tipe_ppn: 'NON' };
 
-    // 1. Nominal
-    const priceMatch = name.match(/\d{1,3}(?:\.\d{3}){1,3}/);
+    // 1. Nominal (Matches 15.370.000 or 15370000)
+    const priceMatch = name.match(/\d{1,3}(?:\.\d{3})+|\d{5,10}/);
     if (priceMatch) meta.total = parseFloat(priceMatch[0].replace(/\./g, '')) || 0;
 
     // 2. PPN/NON

@@ -514,6 +514,24 @@ app.get('/api/files/download/:id', authenticateToken, (req, res) => {
     res.redirect(`/api/files/${req.params.id}/download?token=${req.query.token}`);
 });
 
+// --- Helper for Filename Scanning (Direct Scan Logic) ---
+function extractMetadataFromFilename(filename) {
+    const name = filename.replace(/\.pdf$/i, '').toUpperCase();
+    let meta = { total: 0, tipe_ppn: 'NON' };
+
+    // 1. Nominal Regex (e.g., 15.370.000 or 15370000)
+    const priceMatch = name.match(/\d{1,3}(?:\.\d{3})+|\d{5,10}/);
+    if (priceMatch) {
+        meta.total = parseFloat(priceMatch[0].replace(/\./g, '')) || 0;
+    }
+
+    // 2. PPN/NON detection
+    if (name.includes('PPN')) meta.tipe_ppn = 'PPN';
+    else if (name.includes('NON')) meta.tipe_ppn = 'NON';
+
+    return meta;
+}
+
 // POST /api/files/upload
 app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload.single('file'), async (req, res) => {
     try {
@@ -631,7 +649,18 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
             }
         }
 
-        console.log(`[Metadata] File: ${req.file.originalname} | Nominal: ${req.body.total_jual} | Batch: ${finalBatchId}`);
+        // --- FAIL-SAFE: Server-Side Filename Scanning ---
+        const filenameMeta = extractMetadataFromFilename(req.file.originalname);
+
+        let finalNominal = req.body.total_jual ? parseFloat(req.body.total_jual) : 0;
+        if ((!finalNominal || finalNominal === 0) && filenameMeta.total > 0) {
+            console.log(`[Fail-Safe] Auto-recovered Nominal: ${filenameMeta.total} from ${req.file.originalname}`);
+            finalNominal = filenameMeta.total;
+        }
+
+        const finalTipePPN = req.body.tipe_ppn || filenameMeta.tipe_ppn || 'NON';
+
+        console.log(`[Metadata] File: ${req.file.originalname} | Final Nominal: ${finalNominal} | Batch: ${finalBatchId}`);
 
         // Background Upload (Fire and FORGET to unblock UI)
         const fileBuffer = Buffer.from(req.file.buffer);
@@ -656,9 +685,9 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
                 uploaded_by: req.user.userId,
                 batch_id: finalBatchId,
                 tanggal_dokumen: req.body.tanggal_dokumen,
-                tipe_ppn: req.body.tipe_ppn,
+                tipe_ppn: finalTipePPN,
                 no_invoice: req.body.no_invoice,
-                total_jual: req.body.total_jual ? parseFloat(req.body.total_jual) : null
+                total_jual: finalNominal
             })
             .select()
             .single();
