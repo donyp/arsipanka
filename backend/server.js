@@ -1355,6 +1355,7 @@ app.post('/api/batches', authenticateToken, requireUploadPermission, async (req,
         if (error) throw error;
         res.json({ success: true, batch: data });
     } catch (err) {
+        console.error('[CRITICAL] Failed to create batch session:', err);
         res.status(500).json({ error: 'Gagal membuat sesi batch: ' + err.message });
     }
 });
