@@ -453,6 +453,18 @@ const RcloneStorage = {
 
         console.log(`[RcloneStorage] Successfully deleted: ${alistPath}`);
         return true;
+    },
+
+    /**
+     * Check if a file exists on primary storage.
+     */
+    async checkFileExists(storagePath) {
+        try {
+            await this.getRawUrl(storagePath);
+            return true;
+        } catch (err) {
+            return false;
+        }
     }
 };
 
