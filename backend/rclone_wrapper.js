@@ -465,6 +465,42 @@ const RcloneStorage = {
         } catch (err) {
             return false;
         }
+    },
+
+    /**
+     * List all files in a directory via Alist API.
+     */
+    async listFiles(storagePath) {
+        let cleanPath = storagePath.startsWith('/') ? storagePath : '/' + storagePath;
+        const alistPath = '/terabox' + cleanPath;
+        const alistDomain = 'http://127.0.0.1:5244';
+        const adminPassword = process.env.ALIST_ADMIN_PASSWORD || 'AdminArsip2026!';
+
+        let token = alistTokenCache.token;
+        if (!token || Date.now() > alistTokenCache.expiry) {
+            const tokenResponse = await fetch(`${alistDomain}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'admin', password: adminPassword })
+            });
+            const tokenData = await tokenResponse.json();
+            token = tokenData.data?.token;
+            if (!token) throw new Error('Alist login failed: ' + tokenData.message);
+            alistTokenCache = { token, expiry: Date.now() + 24 * 60 * 60 * 1000 };
+        }
+
+        const listResponse = await fetch(`${alistDomain}/api/fs/list`, {
+            method: 'POST',
+            headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: alistPath, page: 1, per_page: 3000 })
+        });
+
+        const listData = await listResponse.json();
+        if (listData.code !== 200) {
+            throw new Error(`Alist list failed: ${listData.message}`);
+        }
+
+        return listData.data.content || [];
     }
 };
 

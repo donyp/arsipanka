@@ -2055,13 +2055,13 @@ setInterval(async () => {
     }
 }, 6 * 60 * 60 * 1000);
 
-// --- Smart Cleanup & Storage Optimizer Engine ---
+// --- Smart Cleanup & Storage Optimizer Engine (Optimized for Large Volumes) ---
 app.get('/api/files/cleanup-scan', authenticateToken, async (req, res) => {
     try {
-        console.log('[Cleanup Scan] Starting automated storage audit...');
+        console.log('[Cleanup Scan] Starting optimized storage audit...');
 
         // 1. Get all active files
-        const { data: files, error } = await supabase
+        const { data: dbFiles, error } = await supabase
             .from('files')
             .select('id, nama_file, storage_path, ukuran_bytes, category, created_at, zona_id')
             .is('deleted_at', null);
@@ -2069,30 +2069,55 @@ app.get('/api/files/cleanup-scan', authenticateToken, async (req, res) => {
         if (error) throw error;
 
         const results = {
-            duplicates: [], // Exactly same name + ukuran_bytes
-            ghosts: [],     // DB record exists but file is GONE on storage
-            candidates: []  // Files with (1), (2), etc suffixes
+            duplicates: [],
+            ghosts: [],
+            candidates: []
         };
 
-        const fileMap = new Map(); // "name|ukuran_bytes" -> id
+        // 2. Identify unique folders to minimize API calls
+        const folderMap = new Map(); // path -> Set of filenames
+        dbFiles.forEach(f => {
+            const dir = f.storage_path.substring(0, f.storage_path.lastIndexOf('/'));
+            if (!folderMap.has(dir)) folderMap.set(dir, { dbItems: [], storageItems: new Set() });
+            folderMap.get(dir).dbItems.push(f);
+        });
 
-        for (const f of files) {
+        console.log(`[Cleanup Scan] Auditing ${folderMap.size} unique folders for ${dbFiles.length} files...`);
+
+        // 3. Audit each folder once
+        for (const [dir, data] of folderMap.entries()) {
+            try {
+                const filesOnStorage = await RcloneStorage.listFiles(dir);
+                data.storageItems = new Set(filesOnStorage.map(s => s.name));
+            } catch (err) {
+                console.warn(`[Cleanup Scan] Skip folder ${dir} due to error:`, err.message);
+                // If folder listing fails (timeout), we assume files are still there to avoid false positives
+                data.storageItems = new Set(data.dbItems.map(d => d.nama_file));
+            }
+        }
+
+        // 4. Compare DB vs Storage in memory
+        const dupeChecker = new Map(); // "name|size" -> id
+
+        for (const f of dbFiles) {
+            const dir = f.storage_path.substring(0, f.storage_path.lastIndexOf('/'));
+            const folderData = folderMap.get(dir);
+
             // A. Ghost Check
-            const exists = await RcloneStorage.checkFileExists(f.storage_path);
-            if (!exists) {
+            if (!folderData.storageItems.has(f.nama_file)) {
                 results.ghosts.push(f);
                 continue;
             }
 
             // B. Duplicate Check
             const key = `${f.nama_file}|${f.ukuran_bytes}`;
-            if (fileMap.has(key)) {
+            if (dupeChecker.has(key)) {
                 results.duplicates.push(f);
             } else {
-                fileMap.set(key, f.id);
+                dupeChecker.set(key, f.id);
             }
 
-            // C. Candidate Check (Names like "file (1).pdf")
+            // C. Candidate Check
             if (/\(\d+\)\.pdf$/i.test(f.nama_file)) {
                 results.candidates.push(f);
             }
