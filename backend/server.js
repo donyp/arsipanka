@@ -2003,6 +2003,98 @@ app.delete('/api/ads-media/:id', authenticateToken, requirePermission('manage_me
     }
 });
 
+// --- Storage Synchronization Engine (Manual Deletion Detector) ---
+app.get('/api/sync/storage', authenticateToken, async (req, res) => {
+    try {
+        console.log('[Sync Engine] Starting storage reconciliation...');
+        const { data: files, error } = await supabase
+            .from('files')
+            .select('id, storage_path, nama_file')
+            .is('deleted_at', null);
+
+        if (error) throw error;
+
+        let missingCount = 0;
+        const total = files.length;
+
+        for (const f of files) {
+            try {
+                const exists = await RcloneStorage.checkFileExists(f.storage_path);
+                if (!exists) {
+                    console.warn(`[Sync Engine] File MISSING in storage: ${f.nama_file}. Syncing...`);
+                    await supabase.from('files').update({ deleted_at: new Date() }).eq('id', f.id);
+                    missingCount++;
+                }
+            } catch (err) {
+                console.error(`[Sync Engine] Error checking ${f.nama_file}:`, err.message);
+            }
+        }
+
+        res.json({ message: 'Sync complete', total_checked: total, missing_synced: missingCount });
+    } catch (err) {
+        console.error('Sync Engine Error:', err);
+        res.status(500).json({ error: 'Gagal menjalankan sinkronisasi.' });
+    }
+});
+
+// Periodic Sync Background Task (Every 6 hours)
+setInterval(async () => {
+    console.log('[Background Task] Running periodic storage sync...');
+    try {
+        const { data: files } = await supabase.from('files').select('id, storage_path').is('deleted_at', null);
+        if (!files) return;
+
+        for (const f of files) {
+            const exists = await RcloneStorage.checkFileExists(f.storage_path);
+            if (!exists) {
+                await supabase.from('files').update({ deleted_at: new Date() }).eq('id', f.id);
+            }
+        }
+    } catch (err) {
+        console.error('[Background Task] Sync failed:', err);
+    }
+}, 6 * 60 * 60 * 1000);
+
+// --- Business Intelligence Reports Endpoint ---
+app.get('/api/reports/stats', authenticateToken, async (req, res) => {
+    try {
+        const { data: files, error } = await supabase
+            .from('files')
+            .select('category, total_jual, created_at, zona_id, zonas(nama)')
+            .is('deleted_at', null);
+
+        if (error) throw error;
+
+        const stats = {
+            total_invoice: 0,
+            total_piutang: 0,
+            total_amount: 0,
+            zona_dist: {},
+            category_counts: { INVOICE: 0, PIUTANG: 0 }
+        };
+
+        files.forEach(f => {
+            const amount = parseFloat(f.total_jual) || 0;
+            if (f.category === 'PIUTANG') {
+                stats.total_piutang += amount;
+                stats.category_counts.PIUTANG++;
+            } else {
+                stats.total_invoice += amount;
+                stats.category_counts.INVOICE++;
+            }
+            stats.total_amount += amount;
+
+            const zonaName = f.zonas?.nama || 'Unknown';
+            stats.zona_dist[zonaName] = (stats.zona_dist[zonaName] || 0) + amount;
+        });
+
+        res.json(stats);
+    } catch (err) {
+        console.error('Reports API Error:', err);
+        res.status(500).json({ error: 'Gagal memuat statistik laporan.' });
+    }
+});
+
 // ============================================================
 // HEALTH CHECK
 // ============================================================
