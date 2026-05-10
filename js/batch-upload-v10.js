@@ -25,6 +25,63 @@ async function loadMappingData() {
     }
 }
 
+async function handleDirectPDFUpload(event) {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    // Transition to mapping step
+    batchData = files.map((file, index) => {
+        const metadata = parseMetadataFromFilename(file.name);
+        return {
+            id: index,
+            tanggal: metadata.tanggal || new Date().toISOString(),
+            no_invoice: metadata.no_invoice || '-',
+            total: metadata.total || 0,
+            konsumen: metadata.toko || '-',
+            metode: 'TUNAI',
+            pdfFile: file,
+            status: 'ready',
+            errorMsg: '',
+            _originalRow: {} // Empty for direct upload
+        };
+    });
+
+    renderBatchTable();
+    document.getElementById('excel-step').classList.add('hidden');
+    document.getElementById('mapping-step').classList.remove('hidden');
+}
+
+function parseMetadataFromFilename(filename) {
+    const name = filename.replace(/\.pdf$/i, '');
+    let metadata = { toko: '', total: 0, tanggal: '', no_invoice: '', tipe_ppn: 'NON' };
+
+    // 1. Extract Nominal (1.234.567)
+    const priceMatch = name.match(/\d{1,3}(?:\.\d{3}){1,3}/);
+    if (priceMatch) {
+        metadata.total = parseFloat(priceMatch[0].replace(/\./g, '')) || 0;
+    }
+
+    // 2. Extract Type (PPN vs NON)
+    if (name.toUpperCase().includes('PPN')) metadata.tipe_ppn = 'PPN';
+    else if (name.toUpperCase().includes('NON')) metadata.tipe_ppn = 'NON';
+
+    // 3. Extract Toko (Match against loaded tokos)
+    const upperName = name.toUpperCase();
+    const matchedToko = tokos.find(t => upperName.includes(t.nama.toUpperCase()));
+    if (matchedToko) {
+        metadata.toko = matchedToko.nama;
+    }
+
+    // 4. Extract Date (e.g. 03 MEI or 19-04-2026)
+    const datePattern = /(\d{1,2})[-/\s]?(JAN|FEB|MAR|APR|MEI|JUN|JUL|AGU|SEP|OKT|NOV|DES|JANUARI|FEBRUARI|MARET|APRIL|MEI|JUNI|JULI|AGUSTUS|SEPTEMBER|OKTOBER|NOVEMBER|DESEMBER|\d{1,2})[-/\s]?(\d{2,4})?/i;
+    const dateMatch = name.match(datePattern);
+    if (dateMatch) {
+        metadata.tanggal = dateMatch[0];
+    }
+
+    return metadata;
+}
+
 function handleExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -167,29 +224,32 @@ function processExcelData(json) {
 function renderBatchTable() {
     const tbody = document.getElementById('batch-table-body');
     tbody.innerHTML = batchData.map(row => `
-        <tr class="animate-fade-in">
-            <td class="px-5 py-4">
-                <span class="row-status-${row.status} flex items-center gap-2 text-xs font-medium uppercase">
+        <tr class="animate-fade-in group hover:bg-white/5 transition-colors">
+            <td class="px-6 py-4">
+                <span class="row-status-${row.status} flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider">
                     ${getStatusIcon(row.status)}
-                    ${row.status === 'success' ? 'Berhasil' : row.status === 'ready' ? 'Siap' : row.status === 'uploading' ? 'Proses' : row.status === 'error' ? 'Gagal' : 'Pending'}
+                    ${row.status === 'success' ? 'Selesai' : row.status === 'ready' ? 'Siap' : row.status === 'uploading' ? 'Proses' : row.status === 'error' ? 'Gagal' : 'Pending'}
                 </span>
-                ${row.errorMsg ? `<p class="text-[10px] text-red-400 mt-1">${row.errorMsg}</p>` : ''}
+                ${row.errorMsg ? `<p class="text-[9px] text-red-500/80 mt-1 font-medium">${row.errorMsg}</p>` : ''}
             </td>
-            <td class="px-5 py-4 text-sm text-gray-300">${row.tanggal || '-'}</td>
-            <td class="px-5 py-4 text-sm font-mono text-indigo-300 font-medium">${row.no_invoice || '-'}</td>
-            <td class="px-5 py-4 text-sm text-gray-400">${row.konsumen || '-'}</td>
-            <td class="px-5 py-4 text-sm text-gray-300">${formatCurrency(row.total)}</td>
-            <td class="px-5 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">${row.metode || '-'}</td>
-            <td class="px-5 py-4">
+            <td class="px-6 py-4 text-sm font-medium text-gray-300">${row.tanggal || '-'}</td>
+            <td class="px-6 py-4">
+                <p class="text-sm font-bold text-white">${row.konsumen || '-'}</p>
+                <p class="text-[10px] text-gray-500">${row.no_invoice || '-'}</p>
+            </td>
+            <td class="px-6 py-4 text-sm font-bold text-indigo-400 font-mono">${formatCurrency(row.total)}</td>
+            <td class="px-6 py-4">
                 <div class="flex items-center gap-2">
                     <input type="file" id="pdf-${row.id}" accept="application/pdf" class="hidden" onchange="attachPDF(${row.id}, event)">
-                    <label for="pdf-${row.id}" class="btn-ghost px-3 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-1.5">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <label for="pdf-${row.id}" class="h-8 w-8 rounded-lg bg-white/5 hover:bg-indigo-500/20 flex items-center justify-center cursor-pointer transition-all border border-white/10">
+                        <svg class="w-4 h-4 ${row.pdfFile ? 'text-indigo-400' : 'text-gray-500'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                         </svg>
-                        ${row.pdfFile ? 'Ganti PDF' : 'Pilih PDF'}
                     </label>
-                    ${row.pdfFile ? `<span class="text-[10px] text-indigo-400 font-medium truncate max-w-[100px]">${row.pdfFile.name}</span>` : ''}
+                    <div class="flex flex-col">
+                        <span class="text-[11px] font-medium text-gray-400 truncate max-w-[120px]">${row.pdfFile ? row.pdfFile.name : 'Belum ada file'}</span>
+                        ${row.pdfFile ? `<span class="text-[9px] text-gray-600 font-mono">${(row.pdfFile.size / 1024).toFixed(0)} KB</span>` : ''}
+                    </div>
                 </div>
             </td>
         </tr>
@@ -298,6 +358,7 @@ async function uploadRow(row, batchId) {
         formData.append('tanggal_dokumen', formatDateToISO(row.tanggal));
         formData.append('no_invoice', row.no_invoice);
         formData.append('total_jual', row.total);
+        if (row.tipe_ppn) formData.append('tipe_ppn', row.tipe_ppn);
         if (batchId) formData.append('batch_id', batchId);
 
         // IMPORTANT: Append file LAST so multer parses all text fields first
