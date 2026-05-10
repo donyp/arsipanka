@@ -182,7 +182,7 @@ function generateWATemplate(zonaName, files) {
         msg += `- [${merchant}] ${type} ${nominal} ${dateStr || ''}\n`;
     });
 
-    msg += `Silahkan Cek Di:\n`;
+    msg += `\nSilahkan Cek Di:\n`;
     msg += `https://ankaindonesia-arsip.hf.space/\n\n`;
     msg += `_©adminanka_`;
 
