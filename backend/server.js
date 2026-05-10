@@ -1346,7 +1346,6 @@ app.post('/api/batches', authenticateToken, requireUploadPermission, async (req,
             .from('upload_batches')
             .insert({
                 uploader_id: req.user.userId,
-                uploader_name: req.user.name || req.user.email,
                 total_files: 0,
                 success_files: 0
             })
