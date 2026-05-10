@@ -5,18 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batch Upload — Arsip Digital</title>
-    <meta name="description" content="Kirim Data Arsip Masal via Excel">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .drag-active {
-            border-color: #6366f1;
-            background-color: rgba(99, 102, 241, 0.05);
-        }
-
         .excel-table-container {
             max-height: calc(100vh - 450px);
             overflow-y: auto;
@@ -45,148 +39,69 @@
 </head>
 
 <body class="bg-[#0f172a] min-h-screen text-gray-200">
-    <!-- Mobile Overlay -->
     <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
 
-    <!-- Sidebar -->
     <aside id="sidebar"
         class="sidebar fixed top-0 left-0 h-full w-64 bg-[#0c1222] border-r border-white/5 flex flex-col z-40">
         <div class="p-5 border-b border-white/5">
             <div class="flex items-center gap-3">
                 <div
-                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                    </svg>
-                </div>
+                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white font-bold">
+                    A</div>
                 <div>
                     <h1 class="text-sm font-bold text-white">Arsip Digital</h1>
                     <span class="text-xs text-gray-500">Multi-Zona System</span>
                 </div>
             </div>
         </div>
-        <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+        <nav class="flex-1 p-3 space-y-1">
             <a href="dashboard.html"
-                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-                Dashboard
-            </a>
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5">Dashboard</a>
             <a href="upload.html"
-                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-                Upload Invoice
-            </a>
-            <a href="piutang.html"
-                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Pembayaran Piutang
-            </a>
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5">Upload
+                Single</a>
+            <a href="batch-upload.html"
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-white bg-white/5">Batch
+                Upload</a>
             <a href="history.html"
-                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-white bg-white/5 transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Riwayat Batch
-            </a>
+                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5">Riwayat
+                Batch</a>
         </nav>
-        <div class="p-4 border-t border-white/5">
-            <div class="flex items-center gap-3">
-                <img data-user-avatar src="https://ui-avatars.com/api/?name=Admin" alt="avatar"
-                    class="w-9 h-9 rounded-full ring-2 ring-indigo-500/30">
-                <div class="flex-1 min-w-0">
-                    <p data-user-name class="text-sm font-medium text-white truncate">Admin Anka</p>
-                    <span data-user-role class="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">Admin</span>
-                </div>
-            </div>
-        </div>
     </aside>
 
-    <!-- Main Content -->
-    <main id="main-content" class="ml-64 min-h-screen transition-all duration-300 relative">
+    <main id="main-content" class="ml-64 min-h-screen relative">
         <header class="sticky top-0 z-30 backdrop-blur-xl bg-[#0f172a]/80 border-b border-white/5 px-6 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg text-gray-400 hover:bg-white/5">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    </button>
-                    <div>
-                        <h2 class="text-xl font-bold text-white">Batch Upload</h2>
-                        <p class="text-xs text-gray-500">Unggah data POS atau scan PDF secara masal</p>
-                    </div>
-                </div>
-            </div>
+            <h2 class="text-xl font-bold text-white">Batch Upload</h2>
+            <p class="text-xs text-gray-500">Pilih Excel POS atau langsung upload banyak file PDF</p>
         </header>
 
-        <div class="p-6 space-y-6">
-            <!-- Step 1: Entry Choice -->
-            <div id="excel-step" class="glass-card p-12 text-center border border-white/10 rounded-3xl animate-fade-in">
-                <div class="w-20 h-20 rounded-2xl bg-indigo-500/10 flex items-center justify-center mx-auto mb-6">
-                    <svg class="w-10 h-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                </div>
-                <h3 class="text-2xl font-bold text-white mb-2">Mulai Batch Upload</h3>
-                <p class="text-gray-400 mb-10 max-w-sm mx-auto">Anda bisa menggunakan file Excel POS atau langsung
-                    upload banyak PDF untuk discan otomatis.</p>
-
-                <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                    <label
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-10 rounded-2xl transition duration-200 cursor-pointer flex items-center justify-center gap-2 shadow-xl shadow-indigo-500/20">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 17v-2a4 4 0 014-4h10M3 7l4 4 4-4M18 13v6a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                        </svg>
-                        Gunakan Excel POS
-                        <input type="file" id="excel-input" accept=".xlsx, .xls, .csv" class="hidden"
-                            onchange="handleExcelUpload(event)">
-                    </label>
-
-                    <label
-                        class="bg-slate-800 hover:bg-slate-700 text-white font-semibold py-4 px-10 rounded-2xl border border-slate-700 transition duration-200 cursor-pointer flex items-center justify-center gap-2 group">
-                        <svg class="w-5 h-5 text-indigo-400 group-hover:scale-110 transition-transform" fill="none"
-                            stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        <div class="p-6">
+            <!-- Smart Dropzone -->
+            <div id="excel-step"
+                class="glass-card p-12 text-center border-2 border-dashed border-white/10 rounded-3xl hover:border-indigo-500/50 transition-all group">
+                <input type="file" id="batch-input" accept=".pdf, .xlsx, .xls, .csv" multiple class="hidden"
+                    onchange="handleSmartUpload(event)">
+                <label for="batch-input" class="cursor-pointer">
+                    <div
+                        class="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                        <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                         </svg>
-                        Direct PDF Scan
-                        <input type="file" id="direct-pdf-input" accept=".pdf" multiple class="hidden"
-                            onchange="handleDirectPDFUpload(event)">
-                    </label>
-                </div>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Klik atau Tarik File Ke Sini</h3>
+                    <p class="text-sm text-gray-400">Dukung File Excel POS dan Multiple PDF</p>
+                </label>
             </div>
 
-            <!-- Step 2: Mapping & Processing -->
+            <!-- Table View -->
             <div id="mapping-step" class="hidden space-y-4 animate-fade-in">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <h3 data-batch-title class="text-xl font-bold text-white">Preview Data</h3>
-                    </div>
-                    <div class="flex gap-3">
-                        <button onclick="resetBatch()"
-                            class="px-5 py-2.5 rounded-xl text-sm font-medium border border-white/10 hover:bg-white/5 transition-all">Batal</button>
+                    <h3 class="text-lg font-bold text-white">Preview Batch</h3>
+                    <div class="flex gap-2">
+                        <button onclick="resetBatch()" class="btn-ghost px-4 py-2 rounded-xl text-sm">Reset</button>
                         <button onclick="uploadAllReady()" id="btn-upload-all"
-                            class="btn-primary px-8 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                            </svg>
-                            Upload Semua
-                        </button>
+                            class="btn-primary px-6 py-2 rounded-xl text-sm font-bold">Upload Semua</button>
                     </div>
                 </div>
 
@@ -199,12 +114,10 @@
                                     <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Tanggal</th>
                                     <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Merchant</th>
                                     <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Nominal</th>
-                                    <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase">PDF</th>
+                                    <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Berkas</th>
                                 </tr>
                             </thead>
-                            <tbody id="batch-table-body" class="divide-y divide-white/5">
-                                <!-- Data rows injected by JS -->
-                            </tbody>
+                            <tbody id="batch-table-body" class="divide-y divide-white/5"></tbody>
                         </table>
                     </div>
                 </div>
@@ -214,9 +127,9 @@
 
     <script src="js/config.js"></script>
     <script src="js/supabase.js"></script>
-    <script src="js/utils.js?v=20260510"></script>
+    <script src="js/utils.js?v=202605101357"></script>
     <script src="js/auth.js"></script>
-    <script src="js/batch-upload-v10.js?v=1778396021128"></script>
+    <script src="js/batch-upload-v11.js?v=1778396416803"></script>
     <script>
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');

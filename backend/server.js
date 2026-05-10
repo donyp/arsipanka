@@ -575,18 +575,18 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
         let finalBatchId = req.body.batch_id;
 
         if (!finalBatchId) {
-            // Use a per-user mutex to prevent race conditions during concurrent requests
+            console.log(`[Upload] File "${req.file.originalname}" arrived without batch_id. Finding/Creating...`);
             if (!global.batchLocks) global.batchLocks = {};
             const userLockKey = req.user.userId;
 
-            // If another request is already creating/finding a batch, wait for it
+            // Wait if locked
             while (global.batchLocks[userLockKey]) {
-                await new Promise(r => setTimeout(r, 100));
+                await new Promise(r => setTimeout(r, 50));
             }
 
             global.batchLocks[userLockKey] = true;
             try {
-                // Find a batch for this user created in the last 5 minutes
+                // Double-check recent batch under lock
                 const fiveMinAgo = new Date(Date.now() - 300000).toISOString();
                 const { data: recentBatch } = await supabase
                     .from('upload_batches')
@@ -599,19 +599,21 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
 
                 if (recentBatch) {
                     finalBatchId = recentBatch.id;
-                    console.log(`[Auto-Batch] Grouping orphan file into existing batch: ${finalBatchId}`);
+                    console.log(`[Auto-Batch] Grouped into: ${finalBatchId}`);
                 } else {
-                    // Create a new one
-                    const { data: newBatch } = await supabase
+                    const { data: newBatch, error: bErr } = await supabase
                         .from('upload_batches')
                         .insert({ uploader_id: req.user.userId, total_files: 0, success_files: 0 })
                         .select('id')
                         .single();
-                    if (newBatch) {
-                        finalBatchId = newBatch.id;
-                        console.log(`[Auto-Batch] Created new fallback batch: ${finalBatchId}`);
-                    }
+                    if (bErr) throw bErr;
+                    finalBatchId = newBatch.id;
+                    console.log(`[Auto-Batch] Created NEW: ${finalBatchId}`);
                 }
+            } catch (err) {
+                console.error("[Auto-Batch] Critical failure:", err.message);
+                // Fallback to a random ID if everything fails, to avoid "null" batches
+                finalBatchId = 'err_' + Date.now();
             } finally {
                 delete global.batchLocks[userLockKey];
             }
@@ -628,6 +630,8 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
                 console.warn('[Upload] Failed to auto-upsert batch record:', err.message);
             }
         }
+
+        console.log(`[Metadata] File: ${req.file.originalname} | Nominal: ${req.body.total_jual} | Batch: ${finalBatchId}`);
 
         // Background Upload (Fire and FORGET to unblock UI)
         const fileBuffer = Buffer.from(req.file.buffer);
