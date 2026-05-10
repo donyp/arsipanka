@@ -229,15 +229,40 @@ async function uploadAllReady() {
     const btn = document.getElementById('btn-upload-all');
     btn.disabled = true;
 
+    // Create a batch session first
+    let currentBatchId = null;
+    try {
+        const batchRes = await API.post('/api/batches', {});
+        if (batchRes.batch) {
+            currentBatchId = batchRes.batch.id;
+        }
+    } catch (err) {
+        console.warn('[Batch] Could not create batch session:', err.message);
+    }
+
+    let successCount = 0;
     for (const row of readyRows) {
-        await uploadRow(row);
+        const ok = await uploadRow(row, currentBatchId);
+        if (ok) successCount++;
+    }
+
+    // Update batch counters
+    if (currentBatchId) {
+        try {
+            await API.put(`/api/batches/${currentBatchId}`, {
+                total_files: readyRows.length,
+                success_files: successCount
+            });
+        } catch (err) {
+            console.warn('[Batch] Could not update batch counters:', err.message);
+        }
     }
 
     btn.disabled = false;
-    Toast.success('Proses batch selesai.');
+    Toast.success(`Proses batch selesai. ${successCount}/${readyRows.length} file berhasil.`);
 }
 
-async function uploadRow(row) {
+async function uploadRow(row, batchId) {
     row.status = 'uploading';
     renderBatchTable();
 
@@ -255,10 +280,11 @@ async function uploadRow(row) {
         formData.append('file', row.pdfFile);
         formData.append('zona_id', mappedToko.zona_id);
         formData.append('toko_id', mappedToko.id);
-        formData.append('category', 'INVOICE'); // Default to INVOICE for batch POS
+        formData.append('category', 'INVOICE');
         formData.append('tanggal_dokumen', formatDateToISO(row.tanggal));
         formData.append('no_invoice', row.no_invoice);
         formData.append('total_jual', row.total);
+        if (batchId) formData.append('batch_id', batchId);
 
         const response = await fetch(`${CONFIG.API_URL}/api/files/upload`, {
             method: 'POST',
@@ -275,9 +301,11 @@ async function uploadRow(row) {
 
         row.status = 'success';
         row.errorMsg = '';
+        return true;
     } catch (err) {
         row.status = 'error';
         row.errorMsg = err.message;
+        return false;
     } finally {
         renderBatchTable();
     }

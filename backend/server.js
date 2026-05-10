@@ -143,110 +143,7 @@ function authorizeZone(req, res, next) {
     next();
 }
 
-// Global Storage for WhatsApp Batching
-const waQueue = {}; // { [zonaId]: [{ toko, filename, tanggal, kategori }] }
-const waTimeouts = {}; // { [zonaId]: timeoutRef }
-
-/**
- * WhatsApp Notification Helper (Fonnte Gateway - Batch Edition)
- * Aggregates messages for 2 seconds before sending a summary.
- */
-function sendWANotification(zonaId, details) {
-    if (process.env.DISABLE_WA_NOTIFICATIONS === 'true') {
-        console.log('[WA] Notifications are disabled.');
-        return;
-    }
-    // Add to queue
-    if (!waQueue[zonaId]) waQueue[zonaId] = [];
-    waQueue[zonaId].push(details);
-
-    // Reset/Set Debounce Timer (2 seconds for speed & efficiency)
-    if (waTimeouts[zonaId]) clearTimeout(waTimeouts[zonaId]);
-
-    waTimeouts[zonaId] = setTimeout(async () => {
-        if (!waQueue[zonaId]) return;
-        const batch = [...waQueue[zonaId]];
-        delete waQueue[zonaId]; // Clear queue for this zone
-        delete waTimeouts[zonaId];
-
-        try {
-            const token = process.env.FONNTE_TOKEN;
-            if (!token || token === "CHANGE_ME_WITH_YOUR_FONNTE_TOKEN") return;
-
-            // Fetch zone info
-            const { data: zona } = await supabase
-                .from('zonas')
-                .select('nama, wa_recipient')
-                .eq('id', parseInt(zonaId))
-                .single();
-
-            if (!zona || !zona.wa_recipient) return;
-
-            // Build Professional Message from User Template
-            let message = `📂 *INVOICE MERAH SUDAH DI UPLOAD*
-━━━━━━━━━━━━━━━
-📍 *Zona:* ${zona.nama}
-🔢 *Total:* ${batch.length} File Baru
-
-*Daftar Dokumen Terbaru:*
-`;
-
-            // List items (limit to 12 for better mobile readability)
-            batch.slice(0, 12).forEach((item) => {
-                message += `- [${item.toko || 'Umum'}] » ${item.filename}\n`;
-            });
-
-            if (batch.length > 12) {
-                message += `_... dan ${batch.length - 12} file lainnya._\n`;
-            }
-
-            message += `
-✅ Seluruh dokumen telah berhasil di upload ke sistem kami.
-
-Silahkan Cek Di:
-🌐 https://arsip-anka.hf.space
-
-*Ini adalah pesan otomatis!*
-━━━━━━━━━━━━━━━`;
-
-            console.log(`[WA] Sending batch to ${zona.wa_recipient} (${batch.length} files)...`);
-
-            const targets = zona.wa_recipient.split(',').map(t => t.trim()).filter(t => t);
-            
-            for (const target of targets) {
-                try {
-                    const controller = new AbortController();
-                    setTimeout(() => controller.abort(), 8000); 
-
-                    const response = await fetch('https://api.fonnte.com/send', {
-                        method: 'POST',
-                        signal: controller.signal,
-                        headers: {
-                            'Authorization': token,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            target: target,
-                            message: message,
-                            link_preview: false
-                        })
-                    });
-                } catch (sendErr) {
-                    console.error(`[WA] Failed to send to ${target}:`, sendErr.message);
-                }
-            }
-
-            const result = await response.json();
-            if (result.status) {
-                console.log(`[WA] Batch sent successfully! (Zone: ${zona.nama})`);
-            } else {
-                console.error('[WA] Fonnte Error:', result.reason);
-            }
-        } catch (err) {
-            console.error('[WA] Fatal Notification Error:', err.message);
-        }
-    }, 2000); // 2 seconds debounce
-}
+// [DISABLED] Automatic WA Notification System removed — replaced by manual copy-paste notice system.
 
 // ============================================================
 // AUTH ENDPOINTS
@@ -683,6 +580,7 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
                 category: category || 'PPN',
                 ukuran_bytes: size,
                 uploaded_by: req.user.userId,
+                batch_id: req.body.batch_id || null,
                 tanggal_dokumen: req.body.tanggal_dokumen,
                 tipe_ppn: req.body.tipe_ppn,
                 no_invoice: req.body.no_invoice,
@@ -700,20 +598,7 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
             context: `Uploaded ${req.file.originalname} to ${storagePath}`
         });
 
-        // WhatsApp Notification (Asynchronous)
-        // We fetch toko name for better message if available
-        let tokoName = 'Umum';
-        if (toko_id) {
-            const { data: toko } = await supabase.from('toko').select('nama').eq('id', parseInt(toko_id)).single();
-            if (toko) tokoName = toko.nama;
-        }
-
-        sendWANotification(zona_id, {
-            toko: tokoName,
-            filename: req.file.originalname,
-            tanggal: req.body.tanggal_dokumen,
-            kategori: category || 'PPN'
-        });
+        // [DISABLED] WA Notification — replaced by manual copy-paste system via /api/batches
 
         res.json({
             success: true,
@@ -1438,6 +1323,105 @@ app.get('/api/admin/activity-logs', authenticateToken, requirePermission('view_a
 // ============================================================
 // ZONA & TOKO REFERENCE ENDPOINTS
 // ============================================================
+
+// ============================================================
+// BATCH UPLOAD HISTORY & NOTICE SYSTEM
+// ============================================================
+
+// POST /api/batches — Create a new batch session
+app.post('/api/batches', authenticateToken, requireUploadPermission, async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('upload_batches')
+            .insert({
+                uploader_id: req.user.userId,
+                uploader_name: req.user.name || req.user.email,
+                total_files: 0,
+                success_files: 0
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json({ success: true, batch: data });
+    } catch (err) {
+        res.status(500).json({ error: 'Gagal membuat sesi batch: ' + err.message });
+    }
+});
+
+// PUT /api/batches/:id — Update batch counters
+app.put('/api/batches/:id', authenticateToken, async (req, res) => {
+    try {
+        const { total_files, success_files } = req.body;
+        const { error } = await supabase
+            .from('upload_batches')
+            .update({ total_files, success_files })
+            .eq('id', req.params.id);
+
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Gagal update batch: ' + err.message });
+    }
+});
+
+// GET /api/batches — List recent batches
+app.get('/api/batches', authenticateToken, async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('upload_batches')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) throw error;
+        res.json({ batches: data || [] });
+    } catch (err) {
+        res.status(500).json({ error: 'Gagal memuat riwayat batch: ' + err.message });
+    }
+});
+
+// GET /api/batches/:id/details — Get files in a batch, grouped by zona
+app.get('/api/batches/:id/details', authenticateToken, async (req, res) => {
+    try {
+        const { data: files, error } = await supabase
+            .from('files')
+            .select('id, nama_file, zona_id, toko_id, category, no_invoice, total_jual, created_at')
+            .eq('batch_id', req.params.id)
+            .is('deleted_at', null)
+            .order('zona_id');
+
+        if (error) throw error;
+
+        const zonaIds = [...new Set(files.map(f => f.zona_id))];
+        const tokoIds = [...new Set(files.filter(f => f.toko_id).map(f => f.toko_id))];
+
+        const [zonaRes, tokoRes] = await Promise.all([
+            supabase.from('zonas').select('id, nama').in('id', zonaIds),
+            tokoIds.length > 0 ? supabase.from('toko').select('id, nama').in('id', tokoIds) : { data: [] }
+        ]);
+
+        const zonaMap = {};
+        (zonaRes.data || []).forEach(z => zonaMap[z.id] = z.nama);
+        const tokoMap = {};
+        (tokoRes.data || []).forEach(t => tokoMap[t.id] = t.nama);
+
+        // Group files by zona
+        const grouped = {};
+        files.forEach(f => {
+            const zonaName = zonaMap[f.zona_id] || 'Zona ' + f.zona_id;
+            if (!grouped[zonaName]) grouped[zonaName] = [];
+            grouped[zonaName].push({
+                ...f,
+                toko_nama: tokoMap[f.toko_id] || 'Umum'
+            });
+        });
+
+        res.json({ success: true, grouped, total: files.length });
+    } catch (err) {
+        res.status(500).json({ error: 'Gagal memuat detail batch: ' + err.message });
+    }
+});
 
 // GET /api/zonas
 app.get('/api/zonas', authenticateToken, async (req, res) => {
