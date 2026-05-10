@@ -11,7 +11,7 @@ for (const file of htmlFiles) {
     let content = fs.readFileSync(filePath, 'utf8');
 
     // Restore missing script section if it was corrupted in batch-upload.html
-    if (file === 'batch-upload.html' && !content.includes('js/batch-upload-v6.js')) {
+    if (file === 'batch-upload.html' && !content.includes('js/batch-upload-v7.js')) {
         // Find the place before </body>
         const closingTag = '</body>';
         const scriptSection = `
@@ -20,7 +20,7 @@ for (const file of htmlFiles) {
     <script src="js/supabase.js"></script>
     <script src="js/utils.js${vStamp}"></script>
     <script src="js/auth.js"></script>
-    <script src="js/batch-upload-v6.js${vStamp}"></script>
+    <script src="js/batch-upload-v7.js${vStamp}"></script>
     <script>
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -34,8 +34,8 @@ for (const file of htmlFiles) {
         content = content.replace(/const overlay = document\.getElementById\('mobile-overlay'\);[\s\S]*?<\/body>/, scriptSection + '</body>');
     }
 
-    // General replacement for all files to use v6
-    content = content.replace(/js\/batch-upload(?:\.js|-v[0-9]+\.js)(?:\?v=[0-9]+)?/g, `js/batch-upload-v6.js${vStamp}`);
+    // General replacement for all files to use v7
+    content = content.replace(/js\/batch-upload(?:\.js|-v[0-9]+\.js)(?:\?v=[0-9]+)?/g, `js/batch-upload-v7.js${vStamp}`);
 
     fs.writeFileSync(filePath, content);
     console.log(`Processed ${file}`);

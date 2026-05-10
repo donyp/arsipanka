@@ -140,16 +140,21 @@ function processExcelData(json) {
             dateKey, invKey, totalKey, storeKey, methodKey
         });
 
+        // Add parseMoney to the row object context for later re-use
+        row._parseMoney = parseMoney;
+        row._totalKey = totalKey;
+
         return {
             id: index,
             tanggal: row[dateKey] || '',
             no_invoice: row[invKey] || '',
-            total: parseMoney(row[totalKey], row.filename || ''),
+            total: parseMoney(row[totalKey], ''),
             konsumen: row[storeKey] || '',
             metode: row[methodKey] || '',
             pdfFile: null,
-            status: 'pending', // pending, ready, uploading, success, error
-            errorMsg: ''
+            status: 'pending',
+            errorMsg: '',
+            _originalRow: row // Store original excel row data
         };
     });
 
@@ -206,6 +211,17 @@ function attachPDF(id, event) {
     if (row) {
         row.pdfFile = file;
         row.status = 'ready';
+
+        // Re-run nominal extraction if it's currently 0
+        if (!row.total || row.total === 0) {
+            console.log(`[Metadata] Re-evaluating nominal for ${file.name}...`);
+            const excelRow = row._originalRow;
+            if (excelRow && excelRow._parseMoney) {
+                row.total = excelRow._parseMoney(excelRow[excelRow._totalKey], file.name);
+                console.log(`[Metadata] New Nominal: ${row.total}`);
+            }
+        }
+
         renderBatchTable();
     }
 }
