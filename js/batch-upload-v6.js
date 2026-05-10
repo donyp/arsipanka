@@ -93,57 +93,58 @@ function processExcelData(json) {
         const storeKey = findKey(['konsumen', 'nama toko', 'customer', 'customer name', 'toko', 'outlet']);
         const methodKey = findKey(['metode', 'payment', 'bayar', 'tunai', 'kredit']);
 
-        // Improved Money Parsing (Handles Indonesian dots/commas & US formats)
-        const parseMoney = (val) => {
+        const parseMoney = (val, filename) => {
             if (typeof val === 'number') return val;
-            if (!val) return 0;
-            let s = String(val).trim();
 
-            // Remove any currency symbols or spaces
-            s = s.replace(/[^0-9,.]/g, '');
+            let s = '';
+            if (val) {
+                s = val.toString().replace(/[^0-9,.]/g, '');
+            }
 
-            // Determine if it's Indonesian or US format
+            // Fallback: If no value, try to extract from filename (e.g., "1.234.567")
+            if (!s || s === '0') {
+                const match = filename.match(/\d{1,3}(\.\d{3})+/);
+                if (match) {
+                    s = match[0].replace(/\./g, '');
+                    console.log(`[Metadata Fallback] Extracted nominal from filename: ${s}`);
+                }
+            }
+
+            if (!s) return 0;
+
             const hasDot = s.includes('.');
             const hasComma = s.includes(',');
 
             if (hasDot && hasComma) {
-                // Mixed: 1.234.567,89 (ID) or 1,234,567.89 (US)
                 const lastDot = s.lastIndexOf('.');
                 const lastComma = s.lastIndexOf(',');
                 if (lastComma > lastDot) {
-                    // ID Style: 1.234,56
                     s = s.replace(/\./g, '').replace(',', '.');
                 } else {
-                    // US Style: 1,234.56
                     s = s.replace(/,/g, '');
                 }
             } else if (hasComma) {
-                // Comma only: 1,234 (could be 1234 or 1.234)
                 const parts = s.split(',');
-                if (parts[parts.length - 1].length === 3) {
-                    // Likely thousands: 1,000
-                    s = s.replace(/,/g, '');
-                } else {
-                    // Likely decimal: 1,5
-                    s = s.replace(',', '.');
-                }
+                if (parts[parts.length - 1].length === 3) s = s.replace(/,/g, '');
+                else s = s.replace(',', '.');
             } else if (hasDot) {
-                // Dot only: 1.234 (could be 1234 or 1.234)
                 const parts = s.split('.');
-                if (parts[parts.length - 1].length === 3) {
-                    // Likely thousands: 1.000
-                    s = s.replace(/\./g, '');
-                }
+                if (parts[parts.length - 1].length === 3) s = s.replace(/\./g, '');
             }
 
             return parseFloat(s) || 0;
         };
 
+        // Trace found keys
+        console.log(`[Excel Mapping] File: ${row.filename || index}`, {
+            dateKey, invKey, totalKey, storeKey, methodKey
+        });
+
         return {
             id: index,
             tanggal: row[dateKey] || '',
             no_invoice: row[invKey] || '',
-            total: parseMoney(row[totalKey]),
+            total: parseMoney(row[totalKey], row.filename || ''),
             konsumen: row[storeKey] || '',
             metode: row[methodKey] || '',
             pdfFile: null,
