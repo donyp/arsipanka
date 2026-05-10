@@ -96,19 +96,23 @@ function processExcelData(json) {
         const parseMoney = (val, filename) => {
             if (typeof val === 'number') return val;
 
-            let s = '';
-            if (val) {
-                s = val.toString().replace(/[^0-9,.]/g, '');
-            }
-
-            // Fallback: If no value, try to extract from filename (e.g., "1.234.567")
-            if (!s || s === '0') {
-                const match = filename.match(/\d{1,3}(\.\d{3})+/);
+            // --- PRIORITY 1: Filename Pattern (e.g. 15.370.000) ---
+            if (filename) {
+                // Better regex: look for at least one dot-group, e.g. 150.000 or 15.370.000
+                const match = filename.match(/\d{1,3}(?:\.\d{3}){1,3}/);
                 if (match) {
-                    s = match[0].replace(/\./g, '');
-                    console.log(`[Metadata Fallback] Extracted nominal from filename: ${s}`);
+                    const sStr = match[0].replace(/\./g, '');
+                    const n = parseFloat(sStr);
+                    if (n > 0) {
+                        console.log(`[Metadata Priority] Using filename nominal: ${n}`);
+                        return n;
+                    }
                 }
             }
+
+            // --- PRIORITY 2: Excel Value ---
+            if (!val) return 0;
+            let s = val.toString().replace(/[^0-9,.]/g, '');
 
             if (!s) return 0;
 
@@ -118,11 +122,8 @@ function processExcelData(json) {
             if (hasDot && hasComma) {
                 const lastDot = s.lastIndexOf('.');
                 const lastComma = s.lastIndexOf(',');
-                if (lastComma > lastDot) {
-                    s = s.replace(/\./g, '').replace(',', '.');
-                } else {
-                    s = s.replace(/,/g, '');
-                }
+                if (lastComma > lastDot) s = s.replace(/\./g, '').replace(',', '.');
+                else s = s.replace(/,/g, '');
             } else if (hasComma) {
                 const parts = s.split(',');
                 if (parts[parts.length - 1].length === 3) s = s.replace(/,/g, '');
@@ -212,14 +213,12 @@ function attachPDF(id, event) {
         row.pdfFile = file;
         row.status = 'ready';
 
-        // Re-run nominal extraction if it's currently 0
-        if (!row.total || row.total === 0) {
-            console.log(`[Metadata] Re-evaluating nominal for ${file.name}...`);
-            const excelRow = row._originalRow;
-            if (excelRow && excelRow._parseMoney) {
-                row.total = excelRow._parseMoney(excelRow[excelRow._totalKey], file.name);
-                console.log(`[Metadata] New Nominal: ${row.total}`);
-            }
+        // Re-run nominal extraction - Filename takes priority now
+        console.log(`[Metadata] Re-evaluating metadata for ${file.name}...`);
+        const excelRow = row._originalRow;
+        if (excelRow && excelRow._parseMoney) {
+            row.total = excelRow._parseMoney(excelRow[excelRow._totalKey], file.name);
+            console.log(`[Metadata] Final Nominal (Priority source applied): ${row.total}`);
         }
 
         renderBatchTable();
