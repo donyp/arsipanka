@@ -569,8 +569,21 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
         );
         const size = req.file.buffer.length;
 
+        // Ensure batch record exists if batch_id provided (Auto-Upsert)
+        if (req.body.batch_id) {
+            try {
+                await supabase.from('upload_batches').upsert({
+                    id: req.body.batch_id,
+                    uploader_id: req.user.userId,
+                    total_files: 0, // Will be updated by frontend at the end or left as is
+                    success_files: 0
+                }, { onConflict: 'id', ignoreDuplicates: true });
+            } catch (err) {
+                console.warn('[Upload] Failed to auto-upsert batch record:', err.message);
+            }
+        }
+
         // Background Upload (Fire and FORGET to unblock UI)
-        // Memory buffer is cloned implicitly by node/v8 so it won't be cleared when request ends
         const fileBuffer = Buffer.from(req.file.buffer);
         RcloneStorage.uploadInBackground(
             fileBuffer,
@@ -1376,18 +1389,55 @@ app.put('/api/batches/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// GET /api/batches — List recent batches
+// GET /api/batches — List recent batches with dynamic counts from files table
 app.get('/api/batches', authenticateToken, async (req, res) => {
     try {
-        const { data, error } = await supabase
+        // Fetch batches
+        const { data: batches, error: bError } = await supabase
             .from('upload_batches')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(50);
 
-        if (error) throw error;
-        res.json({ batches: data || [] });
+        if (bError) throw bError;
+
+        if (!batches || batches.length === 0) {
+            return res.json({ batches: [] });
+        }
+
+        // Fetch user names for uploader_id mapping (optional enrichment)
+        const uploaderIds = [...new Set(batches.filter(b => b.uploader_id).map(b => b.uploader_id))];
+        const { data: users } = await supabase.from('users').select('id, name').in('id', uploaderIds);
+        const userMap = (users || []).reduce((acc, u) => ({ ...acc, [u.id]: u.name }), {});
+
+        // Fetch counts from files table for THESE batches
+        const batchIds = batches.map(b => b.id);
+        const { data: counts, error: cError } = await supabase
+            .from('files')
+            .select('batch_id')
+            .in('batch_id', batchIds)
+            .is('deleted_at', null);
+
+        if (cError) console.warn('[Batch History] File count error:', cError);
+
+        // Group counts by batch_id
+        const countMap = (counts || []).reduce((acc, f) => {
+            acc[f.batch_id] = (acc[f.batch_id] || 0) + 1;
+            return acc;
+        }, {});
+
+        // Combine
+        const enrichedBatches = batches.map(b => ({
+            ...b,
+            uploader_name: userMap[b.uploader_id] || '-',
+            // Use dynamic count if greater than stored count (or just use dynamic)
+            total_files: countMap[b.id] || b.total_files || 0,
+            success_files: countMap[b.id] || b.success_files || 0
+        }));
+
+        res.json({ batches: enrichedBatches });
     } catch (err) {
+        console.error('[CRITICAL] Failed to load batches:', err);
         res.status(500).json({ error: 'Gagal memuat riwayat batch: ' + err.message });
     }
 });
