@@ -522,6 +522,8 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
         }
 
         const { zona_id, toko_id, category } = req.body;
+        console.log(`[Upload Audit] User: ${req.user.userId}, Body:`, { ...req.body, file: req.file?.originalname });
+
         if (!zona_id) {
             return res.status(400).json({ error: 'zona_id wajib diisi.' });
         }
@@ -573,13 +575,13 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
         let finalBatchId = req.body.batch_id;
 
         if (!finalBatchId) {
-            // Find a batch for this user created in the last 60 seconds
-            const oneMinAgo = new Date(Date.now() - 60000).toISOString();
+            // Find a batch for this user created in the last 5 minutes (300000ms)
+            const fiveMinAgo = new Date(Date.now() - 300000).toISOString();
             const { data: recentBatch } = await supabase
                 .from('upload_batches')
                 .select('id')
                 .eq('uploader_id', req.user.userId)
-                .gte('created_at', oneMinAgo)
+                .gte('created_at', fiveMinAgo)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -691,9 +693,10 @@ app.delete('/api/files/:id', authenticateToken, async (req, res) => {
         // Soft delete (set deleted_at)
 
         if (isHardDelete) {
-            // Delete from storage
-            await RcloneStorage.deleteFile(file.storage_path);
-            // Delete from DB
+            // FIRE AND FORGET: Delete from storage in background
+            RcloneStorage.deleteFile(file.storage_path).catch(err => console.error(`[Background Delete Error] ${file.nama_file}:`, err.message));
+
+            // Delete from DB immediately
             await supabase.from('files').delete().eq('id', file.id);
 
             await supabase.from('audit_logs').insert({
@@ -834,7 +837,7 @@ app.post('/api/files/bulk-trash-delete', authenticateToken, requirePermission('h
     }
 });
 
-// PUT /api/files/:id/restore â€” Super Admin only
+// PUT /api/files/:id/restore — Super Admin only
 app.put('/api/files/:id/restore', authenticateToken, authorizeRole('super_admin'), async (req, res) => {
     try {
         const { error } = await supabase

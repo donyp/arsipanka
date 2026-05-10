@@ -82,10 +82,10 @@ function processExcelData(json) {
         };
 
         const dateKey = findKey(['tanggal', 'date', 'tgl']);
-        const invKey = findKey(['faktur', 'invoice', 'no faktur']);
-        const totalKey = findKey(['jumlah jual', 'jml jual', 'total jual', 'total amount']);
-        const storeKey = findKey(['konsumen', 'nama toko', 'customer', 'customer name']);
-        const methodKey = findKey(['metode bayar', 'metode', 'payment']);
+        const invKey = findKey(['faktur', 'invoice', 'no faktur', 'no_inv', 'no inv']);
+        const totalKey = findKey(['jumlah jual', 'jml jual', 'total jual', 'total amount', 'total', 'nominal', 'amount']);
+        const storeKey = findKey(['konsumen', 'nama toko', 'customer', 'customer name', 'toko']);
+        const methodKey = findKey(['metode bayar', 'metode', 'payment', 'bayar']);
 
         // Improved Money Parsing (Handles Indonesian dots/commas & US formats)
         const parseMoney = (val) => {
