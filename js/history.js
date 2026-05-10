@@ -150,7 +150,7 @@ function generateWATemplate(zonaName, files) {
 
     let msg = `📂 *UPDATE INVOICE ZONA ${zonaNum}*\n`;
     msg += `━━━━━━━━━━━━━━━\n`;
-    msg += `🔢 *Total : ${files.length}*\n\n`;
+    msg += `*Total : ${files.length}*\n\n`;
     msg += `*Daftar Dokumen Terbaru:*\n`;
 
     files.forEach(f => {
@@ -182,10 +182,9 @@ function generateWATemplate(zonaName, files) {
         msg += `- [${merchant}] ${type} ${nominal} ${dateStr || ''}\n`;
     });
 
-    msg += `\n✅ Dokumen diatas berhasil di upload ke sistem kami.\n\n`;
     msg += `Silahkan Cek Di:\n`;
-    msg += `🌐 https://ankaindonesia-arsip.hf.space/\n\n`;
-    msg += `_Admin Anka_`;
+    msg += `https://ankaindonesia-arsip.hf.space/\n\n`;
+    msg += `_©adminanka_`;
 
     return msg;
 }

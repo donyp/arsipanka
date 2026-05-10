@@ -36,6 +36,7 @@ for (const file of htmlFiles) {
 
     // General replacement for all files to use v11
     content = content.replace(/js\/batch-upload(?:\.js|-v[0-9]+\.js)(?:\?v=[0-9]+)?/g, `js/batch-upload-v11.js${vStamp}`);
+    content = content.replace(/js\/history\.js(?:\?v=[0-9]+)?/g, `js/history.js${vStamp}`);
 
     fs.writeFileSync(filePath, content);
     console.log(`Processed ${file}`);
