@@ -1,5 +1,5 @@
 -- ============================================================
--- Sistem Arsip Digital Multi-Zona — New Schema (Terabox + JWT)
+-- Sistem Pusat Arsip Anka Multi-Zona — New Schema (Terabox + JWT)
 -- ============================================================
 
 -- Hapus tabel lama untuk clean slate

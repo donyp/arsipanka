@@ -1,5 +1,5 @@
 ﻿// ============================================================
-// Arsip Digital Backend â€” JWT Auth + Rclone Storage
+// Pusat Arsip Anka Backend — JWT Auth + Rclone Storage
 // ============================================================
 const express = require('express');
 const cors = require('cors');
@@ -2176,7 +2176,7 @@ app.post('/api/files/cleanup-bulk', authenticateToken, async (req, res) => {
 // HEALTH CHECK
 // ============================================================
 app.get('/health', (req, res) => {
-    res.json({ status: 'OK', message: 'Arsip Digital Backend v2.0 running (JWT + Rclone)' });
+    res.json({ status: 'OK', message: 'Pusat Arsip Anka Backend v2.1 running (JWT + Rclone)' });
 });
 
 // ============================================================
@@ -2199,7 +2199,7 @@ setInterval(async () => {
 }, 60 * 60 * 1000);
 
 app.listen(port, () => {
-    console.log(`ðŸš€ Arsip Digital Backend v2.0 running on http://localhost:${port}`);
+    console.log(`🚀 Pusat Arsip Anka Backend v2.1 running on http://localhost:${port}`);
     console.log(`   Auth: JWT (${JWT_EXPIRES_IN} expiry)`);
     console.log(`   Storage: Rclone (Terabox + Storj)`);
     console.log(`   DB: Supabase PostgreSQL`);

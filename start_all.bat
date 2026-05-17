@@ -1,5 +1,5 @@
 @echo off
-title Arsip Digital - Localhost Manager
+title Pusat Arsip Anka - Localhost Manager
 echo Memulai semua server localhost (Alist, Backend, Frontend)...
 
 :: Start Alist Server

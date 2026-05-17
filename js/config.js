@@ -1,5 +1,5 @@
 // ============================================================
-// Sistem Arsip Digital — Configuration
+// Pusat Arsip Anka — Configuration
 // ============================================================
 
 const CONFIG = {

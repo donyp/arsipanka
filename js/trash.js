@@ -1,5 +1,5 @@
 // ============================================================
-// Trash Management Logic — Arsip Digital
+// Trash Management Logic — Pusat Arsip Anka
 // ============================================================
 
 let deletedFiles = [];

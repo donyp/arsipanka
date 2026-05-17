@@ -1,5 +1,5 @@
 ---
-title: Arsip Digital
+title: Pusat Arsip Anka
 emoji: 📂
 colorFrom: indigo
 colorTo: blue
@@ -7,9 +7,9 @@ sdk: docker
 pinned: false
 ---
 
-# Arsip Digital Multi-Zona
+# Pusat Arsip Anka Multi-Zona
 
-Sistem manajemen arsip digital dengan integrasi Terabox & WhatsApp Notification.
+Sistem manajemen Pusat Arsip Anka dengan integrasi Terabox & WhatsApp Notification.
 
 ## Deployment Notes
 Aplikasi ini berjalan menggunakan Docker di Hugging Face Spaces.
