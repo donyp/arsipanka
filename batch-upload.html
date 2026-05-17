@@ -41,35 +41,9 @@
 <body class="bg-[#0f172a] min-h-screen text-gray-200">
     <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
 
+    <!-- Sidebar (rendered by js/sidebar.js) -->
     <aside id="sidebar"
         class="sidebar fixed top-0 left-0 h-full w-64 bg-[#0c1222] border-r border-white/5 flex flex-col z-40">
-        <div class="p-5 border-b border-white/5">
-            <div class="flex items-center gap-3">
-                <div
-                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white font-bold">
-                    A</div>
-                <div>
-                    <h1 class="text-sm font-bold text-white">Pusat Arsip Anka</h1>
-                    <span class="text-xs text-gray-500">Multi-Zona System</span>
-                </div>
-            </div>
-        </div>
-        <nav class="flex-1 p-3 space-y-1">
-            <p class="text-[10px] text-gray-600 uppercase tracking-widest mt-3 mb-1 px-4">Menu Utama</p>
-            <a href="dashboard.html"
-                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5">Dashboard</a>
-
-            <p class="text-[10px] text-gray-600 uppercase tracking-widest mt-6 mb-1 px-4">Upload</p>
-            <a href="upload.html"
-                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5">Upload
-                Single</a>
-            <a href="batch-upload.html"
-                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-white bg-white/5">Batch
-                Upload</a>
-            <a href="history.html"
-                class="sidebar-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5">Riwayat
-                Batch</a>
-        </nav>
     </aside>
 
     <main id="main-content" class="ml-64 min-h-screen relative">
@@ -127,6 +101,7 @@
             </div>
         </div>
     </main>
+    <script src="js/sidebar.js"></script>
 
     <script src="js/config.js"></script>
     <script src="js/supabase.js"></script>
