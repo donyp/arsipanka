@@ -120,7 +120,7 @@ function populateFilters() {
 
 // ---- Load Archives from Backend API ----
 async function loadArchives(append = false) {
-    if (isFetching || (!append && !hasMoreData)) return;
+    if (isFetching || (append && !hasMoreData)) return;
 
     isFetching = true;
     if (!append) {
