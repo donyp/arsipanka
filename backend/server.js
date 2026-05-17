@@ -576,6 +576,94 @@ app.get('/api/files/download/:id', authenticateToken, (req, res) => {
     res.redirect(`/api/files/${req.params.id}/download?token=${req.query.token}`);
 });
 
+// POST /api/files/:id/share - generate signed link
+app.post('/api/files/:id/share', authenticateToken, async (req, res) => {
+    try {
+        const { data: file, error } = await supabase
+            .from('files')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
+
+        if (error || !file) {
+            return res.status(404).json({ error: 'File tidak ditemukan.' });
+        }
+
+        // Zone access check
+        if (req.user.role === 'admin_zona') {
+            if (file.zona_id !== req.user.zona_id) {
+                return res.status(403).json({ error: 'Anda tidak memiliki akses ke file ini.' });
+            }
+            if (file.category === 'PIUTANG') {
+                const userPerms = req.user.permissions || [];
+                if (!userPerms.includes('view_piutang')) {
+                    return res.status(403).json({ error: 'Anda tidak memiliki akses ke kategori Piutang.' });
+                }
+            }
+        }
+
+        // Generate tiny JWT (expires in 2 days)
+        const shareToken = jwt.sign({ f: file.id }, JWT_SECRET, { expiresIn: '2d' });
+
+        res.json({ token: shareToken });
+
+    } catch (err) {
+        console.error('Share File Error:', err);
+        res.status(500).json({ error: 'Gagal membuat link berbagi.' });
+    }
+});
+
+// GET /api/share/:token - download via signed url
+app.get('/api/share/:token', async (req, res) => {
+    try {
+        // Decode tiny JWT
+        const decoded = jwt.verify(req.params.token, JWT_SECRET);
+        if (!decoded || !decoded.f) {
+            return res.status(403).json({ error: 'Tautan berbagi tidak valid atau kadaluarsa.' });
+        }
+
+        const fileId = decoded.f;
+
+        const { data: file, error } = await supabase
+            .from('files')
+            .select('*')
+            .eq('id', fileId)
+            .single();
+
+        if (error || !file) {
+            return res.status(404).json({ error: 'File tidak ditemukan.' });
+        }
+
+        // Stream directly
+        let fileStream;
+        try {
+            fileStream = await RcloneStorage.getStream(file.storage_path);
+        } catch (downloadErr) {
+            console.error(`[Alist Stream Error] Path: ${file.storage_path}`, downloadErr);
+            return res.status(500).json({ error: 'Gagal mendownload file.' });
+        }
+
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${file.nama_file}"`);
+        if (file.ukuran_bytes) {
+            res.setHeader('Content-Length', file.ukuran_bytes);
+        }
+
+        fileStream.pipe(res);
+
+        fileStream.on('error', (err) => {
+            console.error('[Stream Error]', err);
+        });
+
+    } catch (err) {
+        if (err.name === 'TokenExpiredError') {
+            return res.status(403).json({ error: 'Tautan berbagi ini sudah kadaluarsa (melewati 2 hari).' });
+        }
+        console.error('Share Download Error:', err);
+        res.status(500).json({ error: 'Tautan berbagi tidak valid.' });
+    }
+});
+
 // --- Helper for Filename Scanning (Direct Scan Logic) ---
 function extractMetadataFromFilename(filename) {
     const name = filename.replace(/\.pdf$/i, '').toUpperCase();

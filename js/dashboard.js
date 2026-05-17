@@ -483,12 +483,12 @@ function closePreview() {
 
 async function copyFileLink(fileId, btnEl) {
     try {
-        const token = API.getToken();
+        const { token } = await API.post(`/api/files/${fileId}/share`);
         const baseUrl = CONFIG.API_URL || window.location.origin;
-        const downloadUrl = `${baseUrl}/api/files/${fileId}/download?token=${token}`;
+        const shortUrl = `${baseUrl}/api/share/${token}`;
 
-        await navigator.clipboard.writeText(downloadUrl);
-        Toast.success('Link Tautan berhasil disalin!');
+        await navigator.clipboard.writeText(shortUrl);
+        Toast.success('Link Tautan berhasil disalin (Aktif 2 Hari)!');
 
         const originalHtml = btnEl.innerHTML;
         btnEl.innerHTML = `<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span class="text-emerald-400">Tersalin!</span>`;
