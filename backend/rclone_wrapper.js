@@ -64,7 +64,7 @@ const RcloneStorage = {
         let token = alistTokenCache.token;
         if (!token || Date.now() > alistTokenCache.expiry) {
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 15000);
+            const timeout = setTimeout(() => controller.abort(), 30000); // Increased to 30s
             const tokenResponse = await fetch(`${alistDomain}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -79,7 +79,7 @@ const RcloneStorage = {
         }
 
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 15000);
+        const t = setTimeout(() => ctrl.abort(), 30000); // Increased to 30s
         const fsGetResponse = await fetch(`${alistDomain}/api/fs/get`, {
             method: 'POST',
             headers: {
@@ -118,7 +118,7 @@ const RcloneStorage = {
         console.log(`[Stream] Proxying raw URL: ${rawUrl.substring(0, 100)}...`);
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
+        const timeout = setTimeout(() => controller.abort(), 30000); // Increased to 30s (headers only)
 
         const response = await fetch(rawUrl, { signal: controller.signal });
         clearTimeout(timeout);
@@ -270,7 +270,7 @@ const RcloneStorage = {
                 attempt++;
                 try {
                     const c = new AbortController();
-                    const tt = setTimeout(() => c.abort(), 15000);
+                    const tt = setTimeout(() => c.abort(), 600000); // 10 minutes
                     putResponse = await fetch(`${alistDomain}/api/fs/put`, {
                         method: 'PUT',
                         headers: {
@@ -506,7 +506,7 @@ const RcloneStorage = {
         }
 
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 15000);
+        const t = setTimeout(() => ctrl.abort(), 60000); // Increased to 60s for large directories
         const listResponse = await fetch(`${alistDomain}/api/fs/list`, {
             method: 'POST',
             headers: { 'Authorization': token, 'Content-Type': 'application/json' },
