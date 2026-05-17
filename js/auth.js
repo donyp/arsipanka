@@ -159,12 +159,14 @@ function updateUserUI() {
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.querySelector('main');
         const headerLogout = document.getElementById('header-logout-btn');
+        const headerRequest = document.getElementById('header-request-btn');
         if (sidebar) sidebar.style.display = 'none';
         if (mainContent) {
             mainContent.classList.remove('ml-64');
             mainContent.style.marginLeft = '0';
         }
         if (headerLogout) headerLogout.classList.replace('hidden', 'flex');
+        if (headerRequest) headerRequest.classList.replace('hidden', 'flex');
     }
 }
 
