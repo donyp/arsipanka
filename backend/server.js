@@ -339,6 +339,11 @@ app.get('/api/files', authenticateToken, authorizeZone, async (req, res) => {
             query = query.eq('tipe_ppn', req.query.tipe_ppn);
         }
 
+        // Anomaly Status Filter
+        if (req.query.is_anomaly === 'true') {
+            query = query.ilike('status', '%Anomali%');
+        }
+
         // Search
         if (req.query.search) {
             query = query.ilike('nama_file', `%${req.query.search}%`);
@@ -732,7 +737,27 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
 
         const finalTipePPN = req.body.tipe_ppn || filenameMeta.tipe_ppn || 'NON';
 
-        console.log(`[Metadata] File: ${req.file.originalname} | Final Nominal: ${finalNominal} | Batch: ${finalBatchId}`);
+        // --- FRAUD DETECTION: Check for Anomaly (Same Toko, Same Nominal, Same Category, within 24h) ---
+        let finalStatus = 'Unread';
+        if (finalNominal > 0 && toko_id && (category || 'INVOICE') === 'INVOICE') {
+            const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            const { data: anomalyFiles } = await supabase
+                .from('files')
+                .select('id')
+                .eq('toko_id', parseInt(toko_id))
+                .eq('total_jual', finalNominal)
+                .eq('category', 'INVOICE')
+                .gte('created_at', yesterday)
+                .is('deleted_at', null)
+                .limit(1);
+
+            if (anomalyFiles && anomalyFiles.length > 0) {
+                finalStatus = 'Unread (Anomali)';
+                console.warn(`⚠️ [FRAUD DETECTION] Anomaly detected! Duplicate nominal Rp${finalNominal} for Toko ID ${toko_id} within 24h.`);
+            }
+        }
+
+        console.log(`[Metadata] File: ${req.file.originalname} | Final Nominal: ${finalNominal} | Batch: ${finalBatchId} | Status: ${finalStatus}`);
 
         // Background Upload (Fire and FORGET to unblock UI)
         const fileBuffer = Buffer.from(req.file.buffer);
@@ -759,7 +784,8 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
                 tanggal_dokumen: req.body.tanggal_dokumen,
                 tipe_ppn: finalTipePPN,
                 no_invoice: req.body.no_invoice,
-                total_jual: finalNominal
+                total_jual: finalNominal,
+                status: finalStatus
             })
             .select()
             .single();

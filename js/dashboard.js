@@ -9,6 +9,7 @@ let selectedIds = [];
 let currentPage = 1;
 let totalPages = 1;
 let viewMode = 'active'; // 'active' or 'deleted'
+let isAnomalyFilterActive = false;
 let hasMoreData = true;
 let isFetching = false;
 
@@ -147,6 +148,10 @@ async function loadArchives(append = false) {
             start_date: getVal('filter-date-start'),
             end_date: getVal('filter-date-end')
         });
+
+        if (isAnomalyFilterActive) {
+            params.append('is_anomaly', 'true');
+        }
 
         for (const [key, value] of Array.from(params.entries())) {
             if (!value) params.delete(key);
@@ -319,8 +324,12 @@ function renderTable() {
         let cleanName = a.nama_file.toUpperCase().replace(/^(NON\s+|PPN\s+)/i, '');
         // Strip out trailing or embedded dates like " 18 FEB"
         cleanName = cleanName.replace(/\s+\d{1,2}\s+(JAN|FEB|MAR|APR|MEI|MAY|JUN|JUL|AGU|AUG|SEP|OKT|OCT|NOV|DES|DEC)[A-Z]*\b/i, '').trim();
+
+        const isAnomali = a.status && a.status.includes('Anomali');
+        const trClass = isAnomali ? 'bg-red-500/5 hover:bg-red-500/10 border-b border-red-500/20' : (a.status === 'Unread' && !isSuperAdmin() ? 'bg-indigo-900/10 border-l-2 border-indigo-500' : 'border-b border-white/5 hover:bg-white/5');
+
         return `
-        <tr class="animate-fade-in ${a.status === 'Unread' && !isSuperAdmin() ? 'bg-indigo-900/10 border-l-2 border-indigo-500' : 'border-b border-white/5 hover:bg-white/5'}" style="animation-delay: ${i * 30}ms">
+        <tr class="animate-fade-in ${trClass}" style="animation-delay: ${i * 30}ms">
             <td class="w-10">
                 <input type="checkbox" class="custom-checkbox row-checkbox" data-id="${a.id}" 
                     ${selectedIds.includes(a.id) ? 'checked' : ''} 
@@ -328,15 +337,16 @@ function renderTable() {
             </td>
             <td>
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg outline outline-1 outline-white/10 ${a.status === 'Unread' ? 'bg-indigo-500/20' : 'bg-gray-800'} flex items-center justify-center flex-shrink-0 transition-colors">
-                        <svg class="w-4 h-4 ${a.status === 'Unread' ? 'text-indigo-300' : 'text-gray-400'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="w-8 h-8 rounded-lg outline outline-1 outline-white/10 ${isAnomali ? 'bg-red-500/20 text-red-400' : (a.status === 'Unread' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-gray-800 text-gray-400')} flex items-center justify-center flex-shrink-0 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <p class="font-medium ${a.status === 'Unread' ? 'text-white font-semibold' : 'text-gray-300 hover:text-white transition-colors'} text-sm cursor-pointer" title="${a.nama_file}">${truncate(cleanName, 35)}</p>
-                            ${a.status === 'Unread' && !isSuperAdmin() ? '<span class="px-2 py-0.5 rounded text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium tracking-wide">BARU</span>' : ''}
+                            <p class="font-medium ${isAnomali ? 'text-red-400 font-semibold' : (a.status === 'Unread' ? 'text-white font-semibold' : 'text-gray-300 hover:text-white transition-colors')} text-sm cursor-pointer" title="${a.nama_file}">${truncate(cleanName, 35)}</p>
+                            ${a.status === 'Unread' && !isSuperAdmin() && !isAnomali ? '<span class="px-2 py-0.5 rounded text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium tracking-wide">BARU</span>' : ''}
+                            ${isAnomali ? '<span class="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-500 border border-red-500/30 font-bold tracking-wide whitespace-nowrap">⚠️ ANOMALI</span>' : ''}
                         </div>
                     </div>
                 </div>
@@ -407,19 +417,28 @@ function prevPage() {
 
 // ---- Reset Filters ----
 function resetFilters() {
-    ['filter-category', 'filter-tipe', 'filter-zona', 'filter-toko'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
-    ['filter-date-start', 'filter-date-end'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
-    const search = document.getElementById('search-input');
     const searchMobile = document.getElementById('search-input-mobile');
-    if (search) search.value = '';
     if (searchMobile) searchMobile.value = '';
-    applyFilters();
+
+    // reset anomaly
+    isAnomalyFilterActive = false;
+    const btnAnomaly = document.getElementById('btn-filter-anomaly');
+    if (btnAnomaly) {
+        btnAnomaly.classList.add('border-transparent');
+        btnAnomaly.classList.remove('border-red-500/50', 'bg-red-500/10');
+    }
+
+    ['filter-category', 'filter-tipe', 'filter-zona', 'filter-toko', 'filter-date-start', 'filter-date-end'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (id === 'filter-category' && !isSuperAdmin()) {
+                // leave it as is
+            } else {
+                el.value = '';
+            }
+        }
+    });
+    loadArchives();
 }
 
 // ---- Preview via PDF.js ----
@@ -790,6 +809,19 @@ async function deleteArchive(id, fileName, isHardDelete = false) {
 }
 
 // ---- Restore Archive ----
+function toggleAnomalyFilter() {
+    isAnomalyFilterActive = !isAnomalyFilterActive;
+    const btn = document.getElementById('btn-filter-anomaly');
+    if (isAnomalyFilterActive) {
+        btn.classList.remove('border-transparent');
+        btn.classList.add('border-red-500/50', 'bg-red-500/10');
+    } else {
+        btn.classList.add('border-transparent');
+        btn.classList.remove('border-red-500/50', 'bg-red-500/10');
+    }
+    loadArchives();
+}
+
 async function restoreArchive(id, fileName) {
     showConfirmModal(
         'Pulihkan Arsip',
