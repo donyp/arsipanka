@@ -125,6 +125,10 @@ const API = {
         });
     },
 
+    delete(endpoint, body) {
+        return this.del(endpoint, body);
+    },
+
     /**
      * Upload file (FormData)
      */
