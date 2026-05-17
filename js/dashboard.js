@@ -79,8 +79,16 @@ function populateFilters() {
 
     // Inverted Permit: Inject restricted options ONLY for Super Admins
     const catSelect = document.getElementById('filter-category');
+    const roleDiag = document.getElementById('role-diag');
+
+    if (roleDiag) roleDiag.textContent = `(${currentUser?.role || 'null'})`;
+
     if (catSelect) {
         if (isSuperAdmin()) {
+            // Unlock and Inject
+            catSelect.disabled = false;
+            catSelect.classList.remove('opacity-50', 'cursor-not-allowed');
+
             // Avoid duplicates
             if (!catSelect.querySelector('option[value=""]')) {
                 const allOpt = document.createElement('option');
@@ -95,8 +103,10 @@ function populateFilters() {
                 catSelect.appendChild(piutangOpt);
             }
         } else {
-            // Force selection to INVOICE for Admin Zona
+            // Force selection to INVOICE and ensure LOCKED for Admin Zona
             catSelect.value = 'INVOICE';
+            catSelect.disabled = true;
+            catSelect.classList.add('opacity-50', 'cursor-not-allowed');
         }
     }
 
