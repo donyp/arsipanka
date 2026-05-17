@@ -2398,6 +2398,85 @@ app.get('/api/audit-logs', authenticateToken, async (req, res) => {
 });
 
 // ============================================================
+// UPLOAD REQUEST TICKETS
+// ============================================================
+
+// POST /api/requests
+app.post('/api/requests', authenticateToken, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin_zona') {
+            return res.status(403).json({ error: 'Hanya Admin Zona yang dapat membuat tiket.' });
+        }
+
+        const { pesan } = req.body;
+        if (!pesan) return res.status(400).json({ error: 'Pesan request wajib diisi.' });
+
+        const { error } = await supabase.from('upload_requests').insert({
+            user_id: req.user.userId,
+            zona_id: req.user.zona_id,
+            pesan: pesan,
+            status: 'Pending'
+        });
+
+        if (error) throw error;
+        res.json({ success: true, message: 'Request berhasil dikirim.' });
+    } catch (err) {
+        console.error('Create Request Error:', err);
+        res.status(500).json({ error: 'Gagal membuat request dokumen.' });
+    }
+});
+
+// GET /api/requests
+app.get('/api/requests', authenticateToken, async (req, res) => {
+    try {
+        let query = supabase.from('upload_requests')
+            .select(`*, users!upload_requests_user_id_fkey(name, email), zonas!upload_requests_zona_id_fkey(nama)`)
+            .order('created_at', { ascending: false });
+
+        if (req.user.role === 'admin_zona') {
+            query = query.eq('user_id', req.user.userId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        res.json({ requests: data || [] });
+    } catch (err) {
+        console.error('Fetch Requests Error:', err);
+        res.status(500).json({ error: 'Gagal memuat data request.' });
+    }
+});
+
+// PUT /api/requests/:id
+app.put('/api/requests/:id', authenticateToken, async (req, res) => {
+    try {
+        if (req.user.role !== 'super_admin' && req.user.role !== 'moderator') {
+            return res.status(403).json({ error: 'Akses ditolak.' });
+        }
+
+        const { status } = req.body;
+        if (!['Pending', 'Selesai', 'Ditolak'].includes(status)) {
+            return res.status(400).json({ error: 'Status tidak valid.' });
+        }
+
+        const payload = { status };
+        if (status === 'Selesai' || status === 'Ditolak') {
+            payload.resolved_at = new Date().toISOString();
+        } else {
+            payload.resolved_at = null;
+        }
+
+        const { error } = await supabase.from('upload_requests').update(payload).eq('id', req.params.id);
+        if (error) throw error;
+
+        res.json({ success: true, message: 'Status tiket berhasil diupdate.' });
+    } catch (err) {
+        console.error('Update Request Error:', err);
+        res.status(500).json({ error: 'Gagal mengubah status.' });
+    }
+});
+
+// ============================================================
 // HEALTH CHECK
 // ============================================================
 app.get('/health', (req, res) => {

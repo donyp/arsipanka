@@ -1,0 +1,158 @@
+let isFetching = false;
+let requests = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // Requires to be logged in. Anyone can access this page (Zone & Super Admin)
+    const user = await initAuth(null);
+    if (!user) return;
+
+    // Show Create button only for Admin Zona
+    if (user.role === 'admin_zona') {
+        const btnCreate = document.getElementById('btn-create-request');
+        if (btnCreate) btnCreate.classList.remove('hidden');
+    }
+
+    loadRequests();
+});
+
+async function loadRequests() {
+    if (isFetching) return;
+    isFetching = true;
+
+    try {
+        document.getElementById('loading-state').classList.remove('hidden');
+        document.getElementById('empty-state').classList.add('hidden');
+        document.getElementById('table-body').innerHTML = '';
+
+        const res = await API.get('/api/requests');
+        requests = res.requests || [];
+        renderTable();
+    } catch (err) {
+        console.error(err);
+        Toast.error('Gagal memuat tiket permintaan: ' + err.message);
+    } finally {
+        isFetching = false;
+        document.getElementById('loading-state').classList.add('hidden');
+    }
+}
+
+function renderTable() {
+    const tbody = document.getElementById('table-body');
+    const emptyState = document.getElementById('empty-state');
+
+    if (!requests || requests.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        if (currentUser.role === 'super_admin' || currentUser.role === 'moderator') {
+            document.getElementById('empty-sub').textContent = 'Belum ada Admin Zona yang mengirimkan request dokumen.';
+        }
+        return;
+    }
+
+    emptyState.classList.add('hidden');
+
+    tbody.innerHTML = requests.map((r, i) => {
+        const d = new Date(r.created_at);
+        const dateStr = d.toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+        let statusBadge = '';
+        if (r.status === 'Pending') {
+            statusBadge = '<span class="px-2 py-1 rounded-md text-[10px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-bold tracking-wide uppercase">PENDING</span>';
+        } else if (r.status === 'Selesai') {
+            statusBadge = '<span class="px-2 py-1 rounded-md text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold tracking-wide uppercase">SELESAI</span>';
+        } else {
+            statusBadge = '<span class="px-2 py-1 rounded-md text-[10px] bg-red-500/10 text-red-500 border border-red-500/20 font-bold tracking-wide uppercase">DITOLAK</span>';
+        }
+
+        const isAdmin = currentUser.role === 'super_admin' || currentUser.role === 'moderator';
+
+        return `
+        <tr class="animate-fade-in border-b border-white/5 hover:bg-white/5 transition-colors" style="animation-delay: ${i * 30}ms">
+            <td class="p-4 align-top">
+                <p class="text-sm font-medium text-gray-300">${dateStr}</p>
+                ${r.resolved_at ? `<p class="text-[11px] text-gray-500 mt-1">Diselesaikan: ${new Date(r.resolved_at).toLocaleDateString('id-ID')}</p>` : ''}
+            </td>
+            <td class="p-4 align-top">
+                <p class="font-medium text-white text-sm">${r.users?.name || 'Unknown'}</p>
+                <p class="text-xs text-indigo-400 mt-0.5">${r.zonas?.nama || '-'}</p>
+            </td>
+            <td class="p-4 align-top">
+                <p class="text-sm text-gray-300 leading-relaxed">${escapeHtml(r.pesan)}</p>
+            </td>
+            <td class="p-4 align-top">
+                ${statusBadge}
+            </td>
+            <td class="p-4 align-top text-right">
+                ${r.status === 'Pending' && isAdmin ? `
+                    <div class="flex items-center justify-end gap-2">
+                        <button onclick="updateRequestStatus(${r.id}, 'Selesai')" class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-105" title="Tandai Selesai">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </button>
+                        <button onclick="updateRequestStatus(${r.id}, 'Ditolak')" class="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all transform hover:scale-105" title="Tolak">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                ` : '<span class="text-gray-600 text-sm">-</span>'}
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function openRequestModal() {
+    document.getElementById('request-modal').classList.remove('hidden');
+    document.getElementById('request-input').value = '';
+    document.getElementById('request-input').focus();
+}
+
+function closeRequestModal() {
+    document.getElementById('request-modal').classList.add('hidden');
+}
+
+async function submitRequest() {
+    const btnSubmit = document.getElementById('btn-submit');
+    const input = document.getElementById('request-input');
+    const pesan = input.value.trim();
+
+    if (!pesan) {
+        Toast.error('Pesan tidak boleh kosong.');
+        return;
+    }
+
+    const originalText = btnSubmit.innerHTML;
+    btnSubmit.innerHTML = `<div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Menyimpan...`;
+    btnSubmit.disabled = true;
+
+    try {
+        await API.post('/api/requests', { pesan });
+        Toast.success('Request berhasil dikirim ke Pusat.');
+        closeRequestModal();
+        loadRequests();
+    } catch (err) {
+        Toast.error('Gagal mengirim request: ' + err.message);
+    } finally {
+        btnSubmit.innerHTML = originalText;
+        btnSubmit.disabled = false;
+    }
+}
+
+async function updateRequestStatus(id, newStatus) {
+    if (!confirm(`Konfirmasi penandaan tiket menjadi: ${newStatus}?`)) return;
+
+    try {
+        await API.put(`/api/requests/${id}`, { status: newStatus });
+        Toast.success(`Status tiket diubah menjadi ${newStatus}`);
+        loadRequests();
+    } catch (err) {
+        Toast.error('Gagal mengubah status: ' + err.message);
+    }
+}
+
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}

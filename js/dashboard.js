@@ -337,15 +337,16 @@ function renderTable() {
             </td>
             <td>
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg outline outline-1 outline-white/10 ${isAnomali ? 'bg-red-500/20 text-red-400' : (a.status === 'Unread' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-gray-800 text-gray-400')} flex items-center justify-center flex-shrink-0 transition-colors">
+                    <div class="w-8 h-8 rounded-lg outline outline-1 outline-white/10 ${isAnomali ? 'bg-red-500/20 text-red-400' : (a.status && a.status.includes('Read') ? 'bg-emerald-500/20 text-emerald-400' : (a.status === 'Unread' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-gray-800 text-gray-400'))} flex items-center justify-center flex-shrink-0 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            ${a.status && a.status.includes('Read') && !isAnomali ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>'}
                         </svg>
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
                             <p class="font-medium ${isAnomali ? 'text-red-400 font-semibold' : (a.status === 'Unread' ? 'text-white font-semibold' : 'text-gray-300 hover:text-white transition-colors')} text-sm cursor-pointer" title="${a.nama_file}">${truncate(cleanName, 35)}</p>
-                            ${a.status === 'Unread' && !isSuperAdmin() && !isAnomali ? '<span class="px-2 py-0.5 rounded text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium tracking-wide">BARU</span>' : ''}
+                            ${a.status === 'Unread' && !isAnomali ? '<span class="px-2 py-0.5 rounded text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium tracking-wide">BELUM DIBACA</span>' : ''}
+                            ${a.status && a.status.includes('Read') && !isAnomali ? '<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold tracking-wide">✓ TELAH DIBACA</span>' : ''}
                             ${isAnomali ? '<span class="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-500 border border-red-500/30 font-bold tracking-wide whitespace-nowrap">⚠️ ANOMALI</span>' : ''}
                         </div>
                     </div>
@@ -445,8 +446,21 @@ function resetFilters() {
     loadArchives();
 }
 
+function acknowledgeFile(fileId) {
+    if (currentUser?.role === 'admin_zona') {
+        API.post(`/api/files/${fileId}/acknowledge`).then(() => {
+            const index = filteredArchives.findIndex(a => a.id === fileId);
+            if (index !== -1 && filteredArchives[index].status && filteredArchives[index].status.includes('Unread')) {
+                filteredArchives[index].status = filteredArchives[index].status.includes('Anomali') ? 'Read (Anomali)' : 'Read';
+                renderTable();
+            }
+        }).catch(err => console.error('Acknowledge Error:', err));
+    }
+}
+
 // ---- Preview via PDF.js ----
 function openPreview(fileId, fileName) {
+    acknowledgeFile(fileId);
     const modal = document.getElementById('preview-modal');
     const iframe = document.getElementById('preview-iframe');
     const title = document.getElementById('preview-title');
@@ -483,6 +497,7 @@ function closePreview() {
 
 async function copyFileLink(fileId, btnEl) {
     try {
+        acknowledgeFile(fileId);
         const { token } = await API.post(`/api/files/${fileId}/share`);
         const baseUrl = CONFIG.API_URL || window.location.origin;
         const shortUrl = `${baseUrl}/api/share/${token}`;
