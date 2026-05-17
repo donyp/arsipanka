@@ -2275,10 +2275,41 @@ app.post('/api/files/cleanup-bulk', authenticateToken, async (req, res) => {
 });
 
 // ============================================================
+// SYSTEM AUDIT
+// ============================================================
+app.get('/api/audit-logs', authenticateToken, requireSuperAdmin, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
+
+        const { data, count, error } = await supabase
+            .from('audit_logs')
+            .select('*, users(name, email, role)', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(from, to);
+
+        if (error) throw error;
+
+        res.json({
+            logs: data || [],
+            total: count || 0,
+            page,
+            limit,
+            totalPages: Math.ceil((count || 0) / limit)
+        });
+    } catch (err) {
+        console.error('Audit Logs Error:', err);
+        res.status(500).json({ error: 'Gagal memuat log aktivitas.' });
+    }
+});
+
+// ============================================================
 // HEALTH CHECK
 // ============================================================
 app.get('/health', (req, res) => {
-    res.json({ status: 'OK', message: 'Pusat Arsip Anka Backend v2.1 running (JWT + Rclone)' });
+    res.json({ status: 'OK', message: 'Pusat Arsip Anka Backend v2.3 running (JWT + Rclone)' });
 });
 
 // ============================================================
