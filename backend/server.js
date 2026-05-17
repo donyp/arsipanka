@@ -519,10 +519,19 @@ function extractMetadataFromFilename(filename) {
     const name = filename.replace(/\.pdf$/i, '').toUpperCase();
     let meta = { total: 0, tipe_ppn: 'NON' };
 
-    // 1. Nominal Regex (e.g., 15.370.000 or 15370000)
-    const priceMatch = name.match(/\d{1,3}(?:\.\d{3})+|\d{5,10}/);
-    if (priceMatch) {
-        meta.total = parseFloat(priceMatch[0].replace(/\./g, '')) || 0;
+    // 1. Context-Aware Nominal Extraction (Look for number after PPN/NON)
+    // This catches 0, 5000, 15.370.000 etc while avoiding dates.
+    const contextMatch = name.match(/(?:PPN|NON)\s+(\d{1,3}(?:\.\d{3})+|\d+|\b0\b)/);
+    if (contextMatch) {
+        meta.total = parseFloat(contextMatch[1].replace(/\./g, '')) || 0;
+        console.log(`[Filename Scan] Context-Match found: ${meta.total} in "${filename}"`);
+    } else {
+        // Fallback: Greedy Nominal Regex (legacy)
+        const priceMatch = name.match(/\d{1,3}(?:\.\d{3})+|\d{5,10}/);
+        if (priceMatch) {
+            meta.total = parseFloat(priceMatch[0].replace(/\./g, '')) || 0;
+            console.log(`[Filename Scan] Fallback match: ${meta.total}`);
+        }
     }
 
     // 2. PPN/NON detection
