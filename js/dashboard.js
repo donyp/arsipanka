@@ -337,16 +337,16 @@ function renderTable() {
             </td>
             <td>
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg outline outline-1 outline-white/10 ${isAnomali ? 'bg-red-500/20 text-red-400' : (a.status && a.status.includes('Read') ? 'bg-emerald-500/20 text-emerald-400' : (a.status === 'Unread' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-gray-800 text-gray-400'))} flex items-center justify-center flex-shrink-0 transition-colors">
+                    <div class="w-8 h-8 rounded-lg outline outline-1 outline-white/10 ${isAnomali ? 'bg-red-500/20 text-red-400' : (isSuperAdmin() && a.status && a.status.includes('Read') ? 'bg-emerald-500/20 text-emerald-400' : (isSuperAdmin() && a.status === 'Unread' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-gray-800 text-gray-400'))} flex items-center justify-center flex-shrink-0 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            ${a.status && a.status.includes('Read') && !isAnomali ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>'}
+                            ${isSuperAdmin() && a.status && a.status.includes('Read') && !isAnomali ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>'}
                         </svg>
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
                             <p class="font-medium ${isAnomali ? 'text-red-400 font-semibold' : (a.status === 'Unread' ? 'text-white font-semibold' : 'text-gray-300 hover:text-white transition-colors')} text-sm cursor-pointer" title="${a.nama_file}">${truncate(cleanName, 35)}</p>
-                            ${a.status === 'Unread' && !isAnomali ? '<span class="px-2 py-0.5 rounded text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium tracking-wide">BELUM DIBACA</span>' : ''}
-                            ${a.status && a.status.includes('Read') && !isAnomali ? '<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold tracking-wide">✓ TELAH DIBACA</span>' : ''}
+                            ${isSuperAdmin() && a.status === 'Unread' && !isAnomali ? '<span class="px-2 py-0.5 rounded text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium tracking-wide">BELUM DIBACA</span>' : ''}
+                            ${isSuperAdmin() && a.status && a.status.includes('Read') && !isAnomali ? '<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold tracking-wide">✓ TELAH DIBACA</span>' : ''}
                             ${isAnomali ? '<span class="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-500 border border-red-500/30 font-bold tracking-wide whitespace-nowrap">⚠️ ANOMALI</span>' : ''}
                         </div>
                     </div>
@@ -1121,4 +1121,48 @@ async function bulkDeleteSelected() {
         },
         'Hapus'
     );
+}
+
+// ============================================================
+// REQUEST TIKET (MODAL LOGIC)
+// ============================================================
+
+function openRequestModal() {
+    const modal = document.getElementById('request-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.getElementById('request-input').value = '';
+        document.getElementById('request-input').focus();
+    }
+}
+
+function closeRequestModal() {
+    const modal = document.getElementById('request-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function submitRequest() {
+    const btnSubmit = document.getElementById('btn-submit-request');
+    const input = document.getElementById('request-input');
+    const pesan = input.value.trim();
+
+    if (!pesan) {
+        Toast.error('Pesan tidak boleh kosong.');
+        return;
+    }
+
+    const originalText = btnSubmit.innerHTML;
+    btnSubmit.innerHTML = `<div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>`;
+    btnSubmit.disabled = true;
+
+    try {
+        await API.post('/api/requests', { pesan });
+        Toast.success('Request berhasil dikirim ke Pusat.');
+        closeRequestModal();
+    } catch (err) {
+        Toast.error('Gagal mengirim request: ' + err.message);
+    } finally {
+        btnSubmit.innerHTML = originalText;
+        btnSubmit.disabled = false;
+    }
 }
