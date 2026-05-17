@@ -121,22 +121,8 @@ function updateUserStats() {
     if (el('stat-admin-zona')) el('stat-admin-zona').textContent = users.filter(u => u.role === 'admin_zona').length;
 }
 
-// ---- Render Users Table ----
-function renderUsers() {
-    const tbody = document.getElementById('users-body');
-    const emptyState = document.getElementById('users-empty');
-
-    if (!tbody) return;
-
-    if (users.length === 0) {
-        tbody.innerHTML = '';
-        emptyState?.classList.remove('hidden');
-        return;
-    }
-
-    emptyState?.classList.add('hidden');
-
-    tbody.innerHTML = users.map((u, i) => `
+function createRowHtml(u, i) {
+    return `
         <tr class="animate-fade-in" style="animation-delay: ${i * 30}ms">
             <td>
                 <div class="flex items-center gap-2">
@@ -149,7 +135,6 @@ function renderUsers() {
             <td class="text-gray-400 text-sm font-mono">${u.email}</td>
             <td class="text-gray-400 text-sm">${u.contact_email || '-'}</td>
             <td>
-                <!-- Check if moderator via permission override -->
                 ${(u.role === 'moderator' || (u.permissions && u.permissions.includes('IS_MODERATOR'))) ? `
                     <span class="badge bg-purple-500/15 text-purple-400 border-purple-500/30">Moderator</span>
                 ` : `
@@ -182,7 +167,47 @@ function renderUsers() {
                 </div>
             </td>
         </tr>
-    `).join('');
+    `;
+}
+
+// ---- Render Users Table ----
+function renderUsers() {
+    const tbody = document.getElementById('users-body');
+    const emptyState = document.getElementById('users-empty');
+
+    if (!tbody) return;
+
+    if (users.length === 0) {
+        tbody.innerHTML = '';
+        emptyState?.classList.remove('hidden');
+        return;
+    }
+
+    emptyState?.classList.add('hidden');
+
+    const superAdmins = users.filter(u => u.role === 'super_admin' && !(u.permissions && u.permissions.includes('IS_MODERATOR')));
+    const moderators = users.filter(u => u.role === 'moderator' || (u.permissions && u.permissions.includes('IS_MODERATOR')));
+    const adminZonas = users.filter(u => u.role === 'admin_zona');
+
+    let html = '';
+    let globalIndex = 0;
+
+    if (superAdmins.length > 0) {
+        html += `<tr><td colspan="8" class="bg-indigo-500/10 py-3 px-4 text-xs font-bold text-indigo-400 tracking-widest uppercase border-y border-indigo-500/20">🚀 Super Admin</td></tr>`;
+        html += superAdmins.map(u => createRowHtml(u, globalIndex++)).join('');
+    }
+
+    if (moderators.length > 0) {
+        html += `<tr><td colspan="8" class="bg-purple-500/10 py-3 px-4 text-xs font-bold text-purple-400 tracking-widest uppercase border-y border-purple-500/20">🛡️ Moderator</td></tr>`;
+        html += moderators.map(u => createRowHtml(u, globalIndex++)).join('');
+    }
+
+    if (adminZonas.length > 0) {
+        html += `<tr><td colspan="8" class="bg-emerald-500/10 py-3 px-4 text-xs font-bold text-emerald-400 tracking-widest uppercase border-y border-emerald-500/20">🏪 Admin Zona</td></tr>`;
+        html += adminZonas.map(u => createRowHtml(u, globalIndex++)).join('');
+    }
+
+    tbody.innerHTML = html;
 }
 
 // ---- Open Modal for Add ----
