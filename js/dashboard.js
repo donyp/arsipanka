@@ -78,9 +78,18 @@ function populateFilters() {
     }
 
     // Auto-select INVOICE for admin_zona
+    // Force single-category (INVOICE) for Admin Zona
     if (!isSuperAdmin()) {
         const catSelect = document.getElementById('filter-category');
-        if (catSelect) catSelect.value = 'INVOICE';
+        if (catSelect) {
+            catSelect.value = 'INVOICE';
+            // Aggressively remove all other options (PIUTANG, Semua Kategori, etc)
+            Array.from(catSelect.options).forEach(opt => {
+                if (opt.value !== 'INVOICE') {
+                    opt.remove();
+                }
+            });
+        }
     }
 
     populateTokoFilter();

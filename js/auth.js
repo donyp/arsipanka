@@ -122,19 +122,36 @@ function updateUserUI() {
 
     // Show/hide super admin elements
     document.querySelectorAll('[data-role="super_admin"]').forEach(el => {
-        el.style.display = (currentUser.role === 'super_admin' || currentUser.role === 'moderator') ? '' : 'none';
+        const isAllowed = isSuperAdmin();
+        if (!isAllowed) {
+            if (el.tagName === 'OPTION') el.remove();
+            else el.style.display = 'none';
+        } else {
+            el.style.display = '';
+        }
     });
 
     // Handle Granular Permissions
     document.querySelectorAll('[data-permission]').forEach(el => {
         const requiredPerm = el.getAttribute('data-permission');
         const hasPerm = hasPermission(requiredPerm);
-        el.style.display = hasPerm ? '' : 'none';
+        if (!hasPerm) {
+            if (el.tagName === 'OPTION') el.remove();
+            else el.style.display = 'none';
+        } else {
+            el.style.display = '';
+        }
     });
 
     // Hide elements only for admin zona
     document.querySelectorAll('[data-role="admin_zona"]').forEach(el => {
-        el.style.display = currentUser.role === 'admin_zona' ? '' : 'none';
+        const isAllowed = currentUser.role === 'admin_zona';
+        if (!isAllowed) {
+            if (el.tagName === 'OPTION') el.remove();
+            else el.style.display = 'none';
+        } else {
+            el.style.display = '';
+        }
     });
 
     // --- Admin Zona: Hide sidebar, expand main to full-width ---
