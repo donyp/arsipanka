@@ -136,14 +136,60 @@ async function submitRequest() {
 }
 
 async function updateRequestStatus(id, newStatus) {
-    if (!confirm(`Konfirmasi penandaan tiket menjadi: ${newStatus}?`)) return;
+    if (newStatus === 'Ditolak') {
+        openRejectModal(id);
+        return;
+    }
+
+    if (!confirm(`Konfirmasi penandaan tiket menjadi: Selesai?`)) return;
 
     try {
         await API.put(`/api/requests/${id}`, { status: newStatus });
-        Toast.success(`Status tiket diubah menjadi ${newStatus}`);
+        Toast.success(`Status tiket diubah menjadi Selesai`);
         loadRequests();
     } catch (err) {
         Toast.error('Gagal mengubah status: ' + err.message);
+    }
+}
+
+let currentRejectId = null;
+
+function openRejectModal(id) {
+    currentRejectId = id;
+    document.getElementById('reject-modal').classList.remove('hidden');
+    document.getElementById('reject-notes-input').value = '';
+    document.getElementById('reject-notes-input').focus();
+}
+
+function closeRejectModal() {
+    document.getElementById('reject-modal').classList.add('hidden');
+    currentRejectId = null;
+}
+
+async function submitReject() {
+    const btn = document.getElementById('btn-submit-reject');
+    const input = document.getElementById('reject-notes-input');
+    const notes = input.value.trim();
+
+    if (!notes) {
+        Toast.error('Tolong isi alasan penolakan.');
+        return;
+    }
+
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>`;
+    btn.disabled = true;
+
+    try {
+        await API.put(`/api/requests/${currentRejectId}`, { status: 'Ditolak', notes });
+        Toast.success('Tiket berhasil ditolak.');
+        closeRejectModal();
+        loadRequests();
+    } catch (err) {
+        Toast.error('Gagal menolak tiket: ' + err.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     }
 }
 

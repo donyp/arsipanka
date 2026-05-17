@@ -1188,13 +1188,21 @@ async function loadRequestHistory() {
                 if (item.status === 'Selesai') statusClass = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
                 else if (item.status === 'Ditolak') statusClass = 'text-red-400 bg-red-500/10 border-red-500/20';
 
+                let notesHtml = '';
+                if (item.status === 'Ditolak' && item.notes) {
+                    notesHtml = `<p class="text-xs text-red-400/90 mt-1 italic leading-relaxed">Alasan Ditolak: ${item.notes}</p>`;
+                }
+
                 const tr = document.createElement('tr');
                 tr.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
                 tr.innerHTML = `
-                    <td class="py-3 text-gray-300">${new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-                    <td class="py-3 text-white font-medium">${item.pesan}</td>
-                    <td class="py-3 text-right">
-                        <span class="px-2 py-1 rounded text-xs border ${statusClass}">${item.status}</span>
+                    <td class="py-3 text-gray-300 align-top">${new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                    <td class="py-3 text-white font-medium align-top">
+                        ${item.pesan}
+                        ${notesHtml}
+                    </td>
+                    <td class="py-3 text-right align-top">
+                        <span class="px-2 py-1 rounded text-xs border ${statusClass} inline-block whitespace-nowrap">${item.status}</span>
                     </td>
                 `;
                 tbody.appendChild(tr);

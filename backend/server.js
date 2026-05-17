@@ -2454,7 +2454,7 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
             return res.status(403).json({ error: 'Akses ditolak.' });
         }
 
-        const { status } = req.body;
+        const { status, notes } = req.body;
         if (!['Pending', 'Selesai', 'Ditolak'].includes(status)) {
             return res.status(400).json({ error: 'Status tidak valid.' });
         }
@@ -2464,6 +2464,12 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
             payload.resolved_at = new Date().toISOString();
         } else {
             payload.resolved_at = null;
+        }
+
+        if (status === 'Ditolak' && notes) {
+            payload.notes = notes;
+        } else if (status !== 'Ditolak') {
+            payload.notes = null;
         }
 
         const { error } = await supabase.from('upload_requests').update(payload).eq('id', req.params.id);

@@ -269,6 +269,20 @@ CREATE TABLE audit_logs (
 );
 
 -- ============================================================
+-- 6. UPLOAD REQUESTS TICKET SYSTEM
+-- ============================================================
+CREATE TABLE upload_requests (
+    id SERIAL PRIMARY KEY,
+    zona_id INT NOT NULL REFERENCES zonas(id),
+    user_id UUID NOT NULL REFERENCES users(id),
+    pesan TEXT NOT NULL,
+    status TEXT DEFAULT 'Pending' CHECK (status IN ('Pending', 'Selesai', 'Ditolak')),
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ
+);
+
+-- ============================================================
 -- INDEXES
 -- ============================================================
 CREATE INDEX idx_files_zona ON files(zona_id);
@@ -277,6 +291,8 @@ CREATE INDEX idx_files_category ON files(category);
 CREATE INDEX idx_files_deleted ON files(deleted_at);
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_toko_zona ON toko(zona_id);
+CREATE INDEX idx_requests_zona ON upload_requests(zona_id);
+CREATE INDEX idx_requests_status ON upload_requests(status);
 
 -- ============================================================
 -- DISABLE RLS (Access control handled by backend JWT middleware)
@@ -286,3 +302,4 @@ ALTER TABLE files DISABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE zonas DISABLE ROW LEVEL SECURITY;
 ALTER TABLE toko DISABLE ROW LEVEL SECURITY;
+ALTER TABLE upload_requests DISABLE ROW LEVEL SECURITY;

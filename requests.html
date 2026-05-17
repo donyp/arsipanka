@@ -253,6 +253,32 @@
         </div>
     </div>
 
+    <!-- Reject Request Modal -->
+    <div id="reject-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-gray-900/80 backdrop-blur-sm" onclick="closeRejectModal()"></div>
+        <div
+            class="relative w-full max-w-md bg-[#162032] rounded-2xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in flex flex-col">
+            <div class="p-6 border-b border-white/5">
+                <h3 class="text-lg font-bold text-red-500">Tolak Permintaan</h3>
+                <p class="text-sm text-gray-400 mt-1">Berikan alasan mengapa izin tiket permintaan ini ditolak.</p>
+            </div>
+            <div class="p-6">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Alasan Penolakan</label>
+                <textarea id="reject-notes-input" rows="3"
+                    class="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-500 transition-colors"
+                    placeholder="Misal: File sudah diproses pada batch sebelumnya..."></textarea>
+            </div>
+            <div class="p-6 border-t border-white/5 bg-black/20 flex justify-end gap-3">
+                <button onclick="closeRejectModal()"
+                    class="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Batal</button>
+                <button onclick="submitReject()" id="btn-submit-reject"
+                    class="px-6 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-500 transition-all flex items-center gap-2">
+                    Simpan Penolakan
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Script loaded after DOM -->
     <script src="js/config.js"></script>
     <script src="js/supabase.js"></script>
