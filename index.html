@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — Arsip Digital</title>
-    <meta name="description" content="Sistem Arsip Digital Multi-Zona — Login untuk mengakses arsip kantor">
+    <title>Login — Pusat Arsip Anka</title>
+    <meta name="description" content="Pusat Arsip Anka — Login untuk mengakses arsip kantor">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -36,8 +36,8 @@
                         d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                 </svg>
             </div>
-            <h1 class="text-3xl font-bold text-white mb-2">Arsip Digital</h1>
-            <p class="text-gray-400 text-sm">Sistem Arsip Multi-Zona • Akses Aman & Cepat</p>
+            <h1 class="text-3xl font-bold text-white mb-2">Pusat Arsip Anka</h1>
+            <!-- Subtitle removed per request -->
         </div>
 
         <!-- Card -->
@@ -100,42 +100,17 @@
                     <!-- Login Button -->
                     <button type="submit" id="btn-login"
                         class="w-full relative overflow-hidden bg-white text-gray-900 shadow-md font-semibold rounded-2xl py-3 px-4 hover:shadow-xl hover:-translate-y-1 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-white/20 transition-all duration-300">
-                        <span class="relative z-10">Sign In ke Dashboard</span>
+                        <span class="relative z-10">Masuk</span>
                     </button>
                 </form>
 
-                <!-- Divider -->
-                <div class="flex items-center gap-3">
-                    <div class="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-                    <span class="text-xs text-gray-500">Informasi</span>
-                    <div class="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-                </div>
-
-                <!-- Info Cards -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="glass-card-light rounded-xl p-3 text-center">
-                        <div class="text-lg mb-1">ðŸ”’</div>
-                        <span class="text-xs text-gray-400">Akses Berbasis Zona</span>
-                    </div>
-                    <div class="glass-card-light rounded-xl p-3 text-center">
-                        <div class="text-lg mb-1">â˜ï¸</div>
-                        <span class="text-xs text-gray-400">1 TB Cloud Storage</span>
-                    </div>
-                    <div class="glass-card-light rounded-xl p-3 text-center">
-                        <div class="text-lg mb-1">ðŸ“„</div>
-                        <span class="text-xs text-gray-400">Preview Dokumen</span>
-                    </div>
-                    <div class="glass-card-light rounded-xl p-3 text-center">
-                        <div class="text-lg mb-1">ðŸ”</div>
-                        <span class="text-xs text-gray-400">Pencarian Cepat</span>
-                    </div>
-                </div>
+                <!-- Footer removed per request -->
             </div>
         </div>
 
         <!-- Footer -->
         <p class="text-center text-xs text-gray-600 mt-6">
-            &copy; 2026 Arsip Digital Multi-Zona &bull; v2.0
+            &copy; 2026 Pusat Arsip Anka &bull; v2.1
         </p>
     </div>
 
@@ -184,7 +159,7 @@
                 await loginWithCredentials(email, password);
             } catch (err) {
                 btn.disabled = false;
-                btn.innerHTML = '<span class="relative z-10">Sign In ke Dashboard</span>';
+                btn.innerHTML = '<span class="relative z-10">Masuk</span>';
                 errorDiv.classList.remove('hidden');
                 errorText.textContent = err.message;
             }
