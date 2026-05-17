@@ -4,11 +4,13 @@
 // ============================================================
 
 let archives = [];
-let filteredArchives = [];
+let filteredArchives = []; // Kept for legacy compatibility
 let selectedIds = [];
 let currentPage = 1;
 let totalPages = 1;
 let viewMode = 'active'; // 'active' or 'deleted'
+let hasMoreData = true;
+let isFetching = false;
 
 // Zona cache for labels
 window._zonaCache = [];
@@ -33,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('admin-controls')?.classList.remove('hidden');
     }
     setupEventListeners();
+    setupIntersectionObserver();
 });
 
 // ---- Set Current Date ----
@@ -56,6 +59,9 @@ async function loadZonas() {
     try {
         const { zonas } = await API.get('/api/zonas');
         window._zonaCache = zonas || [];
+        if (typeof currentUser !== 'undefined' && currentUser.role === 'admin_zona') {
+            await populateTokoFilter();
+        }
     } catch (err) {
         console.warn('Failed to load zonas:', err);
     }
@@ -112,45 +118,79 @@ function populateFilters() {
 }
 
 // ---- Load Archives from Backend API ----
-async function loadArchives() {
-    showLoading('main-content');
+async function loadArchives(append = false) {
+    if (isFetching || (!append && !hasMoreData)) return;
+
+    isFetching = true;
+    if (!append) {
+        currentPage = 1;
+        archives = [];
+        hasMoreData = true;
+        showLoading('main-content');
+    } else {
+        document.getElementById('scroll-loader')?.classList.remove('hidden');
+    }
 
     try {
-        let endpoint = '/api/files';
+        let endpoint = viewMode === 'deleted' && isSuperAdmin() ? '/api/files/trash' : '/api/files';
 
-        if (isSuperAdmin() && viewMode === 'deleted') {
-            endpoint = '/api/files/trash';
+        const getVal = (id) => document.getElementById(id)?.value || '';
+        const params = new URLSearchParams({
+            page: currentPage,
+            limit: CONFIG.PAGE_SIZE || 20,
+            category: getVal('filter-category'),
+            zona_id: getVal('filter-zona'),
+            toko_id: getVal('filter-toko'),
+            tipe_ppn: getVal('filter-tipe'),
+            search: (getVal('search-input') || getVal('search-input-mobile')).toLowerCase(),
+            // Date bounds
+            start_date: getVal('filter-date-start'),
+            end_date: getVal('filter-date-end')
+        });
+
+        for (const [key, value] of Array.from(params.entries())) {
+            if (!value) params.delete(key);
         }
 
-        const { files } = await API.get(endpoint);
-        archives = files || [];
-        applyFilters();
-        populateTokoFilter();
+        const res = await API.get(`${endpoint}?${params.toString()}`);
+
+        if (res.files && res.files.length > 0) {
+            archives = append ? [...archives, ...res.files] : res.files;
+        } else if (!append) {
+            archives = [];
+        }
+
+        totalPages = res.totalPages || 1;
+        hasMoreData = currentPage < totalPages;
+
+        filteredArchives = archives;
+        renderTable();
+        updateStats();
+        if (!append) await populateTokoFilter();
     } catch (err) {
         Toast.error('Gagal memuat arsip: ' + err.message);
     } finally {
+        isFetching = false;
         hideLoading();
+        document.getElementById('scroll-loader')?.classList.add('hidden');
     }
 }
 
 // ---- Populate Toko Filter based on selected Zona ----
-function populateTokoFilter() {
+async function populateTokoFilter() {
     const tokoSelect = document.getElementById('filter-toko');
     const zonaSelect = document.getElementById('filter-zona');
     if (!tokoSelect) return;
 
     let zonaId = zonaSelect?.value;
 
-    // Fix for admin_zona: if they have no zona select, use their zona_id from currentUser
     if (!zonaId && typeof currentUser !== 'undefined' && currentUser.role === 'admin_zona') {
         zonaId = currentUser.zona_id;
     }
 
-    // Disable if no zona selected
     tokoSelect.disabled = !zonaId;
 
     const currentValue = tokoSelect.value;
-    // Clear existing (keep first "Semua" option)
     while (tokoSelect.options.length > 1) tokoSelect.remove(1);
 
     if (!zonaId) {
@@ -158,22 +198,25 @@ function populateTokoFilter() {
         return;
     }
 
-    // Get unique tokos from archives matching the selected zona
-    const tokos = [...new Set(
-        archives
-            .filter(a => a.zona_id === parseInt(zonaId))
-            .map(a => a.toko?.nama)
-            .filter(Boolean)
-    )].sort();
+    try {
+        const { tokos } = await API.get(`/api/toko?zona_id=${zonaId}`);
+        (tokos || []).forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id; // Switch tracking to ID internally or handle mapping
+            opt.textContent = t.nama;
+            tokoSelect.appendChild(opt);
+        });
 
-    tokos.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t;
-        opt.textContent = t;
-        tokoSelect.appendChild(opt);
-    });
-
-    tokoSelect.value = currentValue;
+        // Try to re-select
+        const opts = Array.from(tokoSelect.options).map(o => o.value);
+        if (opts.includes(currentValue)) {
+            tokoSelect.value = currentValue;
+        } else {
+            tokoSelect.value = '';
+        }
+    } catch (err) {
+        console.error('Failed to fill Toko dropdown', err);
+    }
 }
 
 // ---- Update Stats ----
@@ -187,31 +230,7 @@ function updateStats() {
 
 // ---- Apply Filters ----
 function applyFilters() {
-    const getVal = (id) => document.getElementById(id)?.value || '';
-
-    const category = getVal('filter-category');
-    const zona = getVal('filter-zona');
-    const toko = getVal('filter-toko');
-    const dateStart = getVal('filter-date-start');
-    const dateEnd = getVal('filter-date-end');
-    const tipe_ppn = getVal('filter-tipe');
-    const search = (getVal('search-input') || getVal('search-input-mobile')).toLowerCase();
-
-    filteredArchives = archives.filter(a => {
-        if (category && a.category !== category) return false;
-        if (zona && a.zona_id !== parseInt(zona)) return false;
-        if (toko && a.toko?.nama !== toko) return false;
-        if (tipe_ppn && a.tipe_ppn !== tipe_ppn) return false;
-        if (dateStart && a.created_at < dateStart) return false;
-        if (dateEnd && a.created_at > dateEnd + 'T23:59:59') return false;
-        if (search && !a.nama_file.toLowerCase().includes(search)) return false;
-        return true;
-    });
-
-    currentPage = 1;
-    totalPages = Math.ceil(filteredArchives.length / CONFIG.PAGE_SIZE) || 1;
-    renderTable();
-    updateStats();
+    loadArchives(false);
 }
 
 // ---- Export CSV ----
@@ -261,6 +280,20 @@ function toggleRecycleBin() {
     loadArchives();
 }
 
+// ---- Setup Infinite Scroll ----
+function setupIntersectionObserver() {
+    const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMoreData && !isFetching) {
+            currentPage++;
+            loadArchives(true);
+        }
+    }, { rootMargin: '100px' });
+
+    // Attach to loader once available (we will add this in HTML)
+    const sentinel = document.getElementById('scroll-loader');
+    if (sentinel) observer.observe(sentinel);
+}
+
 // ---- Render Table ----
 function renderTable() {
     const tbody = document.getElementById('archive-body');
@@ -269,9 +302,8 @@ function renderTable() {
 
     if (!tbody) return;
 
-    const start = (currentPage - 1) * CONFIG.PAGE_SIZE;
-    const end = start + CONFIG.PAGE_SIZE;
-    const pageItems = filteredArchives.slice(start, end);
+    // In Infinite Scroll mode, we render ALL loaded items
+    const pageItems = filteredArchives;
 
     if (filteredArchives.length === 0) {
         tbody.innerHTML = '';
@@ -281,7 +313,7 @@ function renderTable() {
     }
 
     emptyState?.classList.add('hidden');
-    pagination?.classList.remove('hidden');
+    pagination?.classList.add('hidden'); // We now use infinite scroll instead of frontend pagination
 
     tbody.innerHTML = pageItems.map((a, i) => {
         let cleanName = a.nama_file.toUpperCase().replace(/^(NON\s+|PPN\s+)/i, '');

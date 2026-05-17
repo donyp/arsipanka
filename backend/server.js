@@ -311,7 +311,7 @@ app.get('/api/files', authenticateToken, authorizeZone, async (req, res) => {
     try {
         let query = supabase
             .from('files')
-            .select('*, zonas(kode, nama), toko(kode, nama)')
+            .select('*, zonas(kode, nama), toko(kode, nama)', { count: 'exact' })
             .is('deleted_at', null)
             .order('created_at', { ascending: false });
 
@@ -344,10 +344,24 @@ app.get('/api/files', authenticateToken, authorizeZone, async (req, res) => {
             query = query.ilike('nama_file', `%${req.query.search}%`);
         }
 
-        const { data, error } = await query;
+        // Pagination
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
+
+        query = query.range(from, to);
+
+        const { data, error, count } = await query;
         if (error) throw error;
 
-        res.json({ files: data || [] });
+        res.json({
+            files: data || [],
+            total: count || 0,
+            page,
+            limit,
+            totalPages: Math.ceil((count || 0) / limit)
+        });
 
     } catch (err) {
         console.error('List Files Error:', err);
@@ -358,12 +372,20 @@ app.get('/api/files', authenticateToken, authorizeZone, async (req, res) => {
 // GET /api/files/trash — list deleted files
 app.get('/api/files/trash', authenticateToken, requirePermission('restore_trash'), async (req, res) => {
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('files')
-            .select('*, zonas(kode, nama), toko(kode, nama), users!deleted_by(name)')
+            .select('*, zonas(kode, nama), toko(kode, nama), users!deleted_by(name)', { count: 'exact' })
             .not('deleted_at', 'is', null)
             .order('deleted_at', { ascending: false });
 
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
+
+        query = query.range(from, to);
+
+        const { data, error, count } = await query;
         if (error) throw error;
 
         // Fallback for "Unknown" if deleted_by is NULL or user deleted
@@ -379,13 +401,43 @@ app.get('/api/files/trash', authenticateToken, requirePermission('restore_trash'
             };
         });
 
-        res.json({ files: filesWithFallback });
+        res.json({
+            files: filesWithFallback,
+            total: count || 0,
+            page,
+            limit,
+            totalPages: Math.ceil((count || 0) / limit)
+        });
     } catch (err) {
         console.error('Trash List Error:', err);
         res.status(500).json({ error: 'Gagal memuat daftar sampah.' });
     }
 });
 
+
+// GET /api/toko — list tokos (filtered by zona)
+app.get('/api/toko', authenticateToken, async (req, res) => {
+    try {
+        let query = supabase.from('toko').select('id, kode, nama').order('nama', { ascending: true });
+
+        let targetZona = req.query.zona_id;
+        if (req.user.role === 'admin_zona') {
+            targetZona = req.user.zona_id;
+        }
+
+        if (targetZona) {
+            query = query.eq('zona_id', parseInt(targetZona));
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        res.json({ tokos: data || [] });
+    } catch (err) {
+        console.error('List Toko Error:', err);
+        res.status(500).json({ error: 'Gagal memuat daftar toko.' });
+    }
+});
 
 // GET /api/files/:id/view â€” return file for PDF.js viewer
 app.get('/api/files/:id/view', authenticateToken, async (req, res) => {

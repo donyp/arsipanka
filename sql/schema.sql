@@ -199,6 +199,30 @@ INSERT INTO toko (nama, zona_id, kode) VALUES
 ('Sukadami', (SELECT id FROM zonas WHERE kode='zona-17'), 'toko-sukadami'),
 ('Cibarusah', (SELECT id FROM zonas WHERE kode='zona-17'), 'toko-cibarusah');
 
+-- Record Session Activity
+CREATE OR REPLACE FUNCTION update_active_session()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE active_sessions 
+  SET last_active = NOW() 
+  WHERE session_id = NEW.session_id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================
+-- 📊 INDEXING FOR MASSIVE DATA PERFORMANCE (v2.2)
+-- ============================================================
+
+-- Untuk Pagination & Filter Instan di Dasbor
+CREATE INDEX IF NOT EXISTS idx_files_zona_id ON files(zona_id);
+CREATE INDEX IF NOT EXISTS idx_files_category ON files(category);
+CREATE INDEX IF NOT EXISTS idx_files_toko_id ON files(toko_id);
+CREATE INDEX IF NOT EXISTS idx_files_created_at ON files(created_at DESC);
+
+-- Index Komposit (Filter Kombinasi Serupa dengan di Dasbor)
+CREATE INDEX IF NOT EXISTS idx_files_zona_category ON files(zona_id, category) WHERE deleted_at IS NULL;
+
 -- ============================================================
 -- 3. USERS (JWT-based, no Supabase Auth dependency)
 -- ============================================================
