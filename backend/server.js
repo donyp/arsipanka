@@ -589,9 +589,10 @@ app.post('/api/files/:id/share', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'File tidak ditemukan.' });
         }
 
-        // Zone access check
+        // Zone access check (Security robustification)
         if (req.user.role === 'admin_zona') {
-            if (file.zona_id !== req.user.zona_id) {
+            if (Number(file.zona_id) !== Number(req.user.zona_id)) {
+                console.warn(`[SECURITY] Forbidden share request by Admin Zona ${req.user.userId} for file in Zona ${file.zona_id}`);
                 return res.status(403).json({ error: 'Anda tidak memiliki akses ke file ini.' });
             }
             if (file.category === 'PIUTANG') {
@@ -610,6 +611,49 @@ app.post('/api/files/:id/share', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('Share File Error:', err);
         res.status(500).json({ error: 'Gagal membuat link berbagi.' });
+    }
+});
+
+// POST /api/files/:id/acknowledge - mark file as read
+app.post('/api/files/:id/acknowledge', authenticateToken, async (req, res) => {
+    try {
+        const { data: file, error } = await supabase
+            .from('files')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
+
+        if (error || !file) {
+            return res.status(404).json({ error: 'File tidak ditemukan.' });
+        }
+
+        // Zone access check
+        if (req.user.role === 'admin_zona' && Number(file.zona_id) !== Number(req.user.zona_id)) {
+            return res.status(403).json({ error: 'Akses ditolak.' });
+        }
+
+        // Update status to 'Read' if it was 'Unread'
+        let newStatus = file.status;
+        if (file.status === 'Unread') {
+            newStatus = 'Read';
+        } else if (file.status === 'Unread (Anomali)') {
+            newStatus = 'Read (Anomali)';
+        }
+
+        if (newStatus !== file.status) {
+            await supabase
+                .from('files')
+                .update({ status: newStatus })
+                .eq('id', file.id);
+
+            console.log(`[Acknowledge] File ${file.id} marked as ${newStatus} by ${req.user.userId}`);
+        }
+
+        res.json({ success: true, status: newStatus });
+
+    } catch (err) {
+        console.error('Acknowledge Error:', err);
+        res.status(500).json({ error: 'Server error saat memproses tanda terima.' });
     }
 });
 

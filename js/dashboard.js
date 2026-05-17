@@ -448,10 +448,10 @@ function resetFilters() {
 
 function acknowledgeFile(fileId) {
     if (currentUser?.role === 'admin_zona') {
-        API.post(`/api/files/${fileId}/acknowledge`).then(() => {
+        API.post(`/api/files/${fileId}/acknowledge`).then((res) => {
             const index = filteredArchives.findIndex(a => a.id === fileId);
-            if (index !== -1 && filteredArchives[index].status && filteredArchives[index].status.includes('Unread')) {
-                filteredArchives[index].status = filteredArchives[index].status.includes('Anomali') ? 'Read (Anomali)' : 'Read';
+            if (index !== -1 && res.status) {
+                filteredArchives[index].status = res.status;
                 renderTable();
             }
         }).catch(err => console.error('Acknowledge Error:', err));
@@ -502,8 +502,21 @@ async function copyFileLink(fileId, btnEl) {
         const baseUrl = CONFIG.API_URL || window.location.origin;
         const shortUrl = `${baseUrl}/api/share/${token}`;
 
-        await navigator.clipboard.writeText(shortUrl);
-        Toast.success('Link Tautan berhasil disalin (Aktif 2 Hari)!');
+        // Try modern Clipboard API
+        try {
+            await navigator.clipboard.writeText(shortUrl);
+            Toast.success('Link Tautan berhasil disalin (Aktif 2 Hari)!');
+        } catch (clipErr) {
+            console.warn('Clipboard API failed, trying execCommand fallback:', clipErr);
+            // Fallback for non-HTTPS or sensitive browsers
+            const textArea = document.createElement("textarea");
+            textArea.value = shortUrl;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            Toast.success('Link Tautan berhasil disalin!');
+        }
 
         const originalHtml = btnEl.innerHTML;
         btnEl.innerHTML = `<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span class="text-emerald-400">Tersalin!</span>`;
@@ -512,7 +525,7 @@ async function copyFileLink(fileId, btnEl) {
         }, 2000);
     } catch (err) {
         console.error('Copy Failed:', err);
-        Toast.error('Gagal menyalin link.');
+        Toast.error('Gagal menyalin link: ' + (err.message || 'Server error'));
     }
 }
 
