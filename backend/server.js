@@ -16,6 +16,11 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const app = express();
 const port = process.env.PORT || 4000;
 
+console.log('================================================');
+console.log(`[BOOT] Pusat Arsip Anka - v2.1.0-fixed`);
+console.log(`[BOOT] Time: ${new Date().toISOString()}`);
+console.log('================================================');
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

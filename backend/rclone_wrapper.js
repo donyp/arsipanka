@@ -334,11 +334,15 @@ const RcloneStorage = {
 
             // 1. Get Token (with caching)
             const adminPassword = process.env.ALIST_ADMIN_PASSWORD || 'AdminArsip2026!';
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 30000); // 30s
             const tokenResponse = await fetch(`${alistDomain}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: 'admin', password: adminPassword })
+                body: JSON.stringify({ username: 'admin', password: adminPassword }),
+                signal: controller.signal
             });
+            clearTimeout(timeout);
             const tokenData = await tokenResponse.json();
             const token = tokenData.data?.token;
             if (!token) throw new Error('Alist login failed: ' + tokenData.message);
@@ -364,15 +368,19 @@ const RcloneStorage = {
                 }
             }
 
-            // 2. Put File directly
+            // 2. Put File directly with 10 minute timeout
+            const c = new AbortController();
+            const tt = setTimeout(() => c.abort(), 600000); // 10 minutes
             const putResponse = await fetch(`${alistDomain}/api/fs/put`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': token,
                     'File-Path': encodeURIComponent('/terabox' + storagePath)
                 },
-                body: fileBuffer
+                body: fileBuffer,
+                signal: c.signal
             });
+            clearTimeout(tt);
             const putData = await putResponse.json();
             if (putData.code !== 200) throw new Error('Alist API upload failed: ' + putData.message);
 
@@ -432,11 +440,15 @@ const RcloneStorage = {
         // Get or refresh Alist token
         let token = alistTokenCache.token;
         if (!token || Date.now() > alistTokenCache.expiry) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 30000);
             const tokenResponse = await fetch(`${alistDomain}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: 'admin', password: adminPassword })
+                body: JSON.stringify({ username: 'admin', password: adminPassword }),
+                signal: controller.signal
             });
+            clearTimeout(timeout);
             const tokenData = await tokenResponse.json();
             token = tokenData.data?.token;
             if (!token) throw new Error('Alist login failed: ' + tokenData.message);
@@ -449,6 +461,8 @@ const RcloneStorage = {
 
         console.log(`[RcloneStorage] Deleting via Alist: dir="${dir}" file="${fileName}"`);
 
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 30000);
         const deleteResponse = await fetch(`${alistDomain}/api/fs/remove`, {
             method: 'POST',
             headers: {
@@ -458,8 +472,10 @@ const RcloneStorage = {
             body: JSON.stringify({
                 dir: dir,
                 names: [fileName]
-            })
+            }),
+            signal: ctrl.signal
         });
+        clearTimeout(t);
 
         const deleteData = await deleteResponse.json();
         if (deleteData.code !== 200) {

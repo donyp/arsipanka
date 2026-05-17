@@ -1,12 +1,18 @@
 async function setup() {
-    const alistDomain = 'http://127.0.0.1:5244';
     const adminPassword = process.env.ALIST_ADMIN_PASSWORD || 'AdminArsip2026!';
+    const alistDomain = 'http://127.0.0.1:5244';
 
-    console.log('Waiting for Alist to be ready...');
+    console.log('Booting... Waiting 10s for Alist to initialize...');
+    await new Promise(r => setTimeout(r, 10000));
+
+    console.log('Checking if Alist is ready...');
     let ready = false;
     for (let i = 0; i < 30; i++) {
         try {
-            const res = await fetch(`${alistDomain}/api/public/settings`);
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 10000);
+            const res = await fetch(`${alistDomain}/api/public/settings`, { signal: ctrl.signal });
+            clearTimeout(t);
             if (res.status === 200) {
                 ready = true;
                 break;
@@ -21,11 +27,15 @@ async function setup() {
     }
 
     console.log('Logging in to Alist...');
+    const loginCtrl = new AbortController();
+    const loginT = setTimeout(() => loginCtrl.abort(), 30000);
     const loginRes = await fetch(`${alistDomain}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'admin', password: adminPassword })
+        body: JSON.stringify({ username: 'admin', password: adminPassword }),
+        signal: loginCtrl.signal
     });
+    clearTimeout(loginT);
     const loginData = await loginRes.json();
     const token = loginData.data?.token;
 
@@ -35,9 +45,13 @@ async function setup() {
     }
 
     console.log('Checking existing storages...');
+    const listCtrl = new AbortController();
+    const listT = setTimeout(() => listCtrl.abort(), 30000);
     const listRes = await fetch(`${alistDomain}/api/admin/storage/list`, {
-        headers: { 'Authorization': token }
+        headers: { 'Authorization': token },
+        signal: listCtrl.signal
     });
+    clearTimeout(listT);
     const listData = await listRes.json();
     const storages = listData.data?.content || [];
 
@@ -47,6 +61,8 @@ async function setup() {
         console.log('Terabox storage already exists.');
     } else {
         console.log('Creating Terabox storage...');
+        const createCtrl = new AbortController();
+        const createT = setTimeout(() => createCtrl.abort(), 60000); // 60s for storage creation
         const createRes = await fetch(`${alistDomain}/api/admin/storage/create`, {
             method: 'POST',
             headers: {
@@ -72,8 +88,10 @@ async function setup() {
                 web_proxy: true,
                 webdav_policy: "native_proxy",
                 down_proxy_sign: true
-            })
+            }),
+            signal: createCtrl.signal
         });
+        clearTimeout(createT);
         const createData = await createRes.json();
         if (createData.code === 200) {
             console.log('Terabox storage created successfully!');
