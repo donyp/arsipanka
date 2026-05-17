@@ -215,13 +215,13 @@ $$ LANGUAGE plpgsql;
 -- ============================================================
 
 -- Untuk Pagination & Filter Instan di Dasbor
-CREATE INDEX IF NOT EXISTS idx_files_zona_id ON files(zona_id);
-CREATE INDEX IF NOT EXISTS idx_files_category ON files(category);
-CREATE INDEX IF NOT EXISTS idx_files_toko_id ON files(toko_id);
-CREATE INDEX IF NOT EXISTS idx_files_created_at ON files(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_files_zona_id ON public.files(zona_id);
+CREATE INDEX IF NOT EXISTS idx_files_category ON public.files(category);
+CREATE INDEX IF NOT EXISTS idx_files_toko_id ON public.files(toko_id);
+CREATE INDEX IF NOT EXISTS idx_files_created_at ON public.files(created_at DESC);
 
 -- Index Komposit (Filter Kombinasi Serupa dengan di Dasbor)
-CREATE INDEX IF NOT EXISTS idx_files_zona_category ON files(zona_id, category) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_files_zona_category ON public.files(zona_id, category) WHERE deleted_at IS NULL;
 
 -- ============================================================
 -- 3. USERS (JWT-based, no Supabase Auth dependency)
