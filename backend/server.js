@@ -2277,8 +2277,12 @@ app.post('/api/files/cleanup-bulk', authenticateToken, async (req, res) => {
 // ============================================================
 // SYSTEM AUDIT
 // ============================================================
-app.get('/api/audit-logs', authenticateToken, requireSuperAdmin, async (req, res) => {
+app.get('/api/audit-logs', authenticateToken, async (req, res) => {
     try {
+        if (req.user.role !== 'super_admin') {
+            return res.status(403).json({ error: 'Akses ditolak.' });
+        }
+
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const from = (page - 1) * limit;
