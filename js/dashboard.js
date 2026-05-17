@@ -290,7 +290,7 @@ function setupIntersectionObserver() {
     }, { rootMargin: '100px' });
 
     // Attach to loader once available (we will add this in HTML)
-    const sentinel = document.getElementById('scroll-loader');
+    const sentinel = document.getElementById('infinite-scroll-trigger');
     if (sentinel) observer.observe(sentinel);
 }
 
