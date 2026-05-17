@@ -79,9 +79,7 @@ function populateFilters() {
 
     // Inverted Permit: Inject restricted options ONLY for Super Admins
     const catSelect = document.getElementById('filter-category');
-    const roleDiag = document.getElementById('role-diag');
 
-    if (roleDiag) roleDiag.textContent = `(${currentUser?.role || 'null'})`;
 
     if (catSelect) {
         if (isSuperAdmin()) {
@@ -417,20 +415,30 @@ function openPreview(fileId, fileName) {
 
     title.textContent = fileName;
 
-    // Use the backend API to serve the PDF for viewing
-    const token = API.getToken();
-    iframe.src = `${CONFIG.API_URL}/api/files/${fileId}/view?token=${token}`;
-    download.href = `${CONFIG.API_URL}/api/files/${fileId}/download?token=${token}`;
+    // Reset iframe to avoid showing previous document
+    iframe.src = 'about:blank';
 
+    const token = API.getToken();
+    const viewUrl = `${CONFIG.API_URL}/api/files/${fileId}/view?token=${token}`;
+    const downloadUrl = `${CONFIG.API_URL}/api/files/${fileId}/download?token=${token}`;
+
+    download.href = downloadUrl;
+
+    // Show modal
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+
+    // Use a small timeout to ensure the layout is ready before the stream starts
+    setTimeout(() => {
+        iframe.src = viewUrl;
+    }, 100);
 }
 
 function closePreview() {
     const modal = document.getElementById('preview-modal');
     const iframe = document.getElementById('preview-iframe');
     modal.classList.add('hidden');
-    iframe.src = '';
+    iframe.src = 'about:blank'; // Clear src to stop loading
     document.body.style.overflow = '';
 }
 
