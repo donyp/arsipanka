@@ -387,22 +387,6 @@ function renderTable() {
         </tr>`;
     }).join('');
 
-    // Update pagination info
-    const rangeEl = document.getElementById('showing-range');
-    const totalEl = document.getElementById('total-count');
-    const btnPrev = document.getElementById('prev-btn');
-    const btnNext = document.getElementById('next-btn');
-
-    if (totalEl) totalEl.textContent = filteredArchives.length;
-    if (rangeEl) {
-        const startIdx = filteredArchives.length > 0 ? start + 1 : 0;
-        const endIdx = Math.min(start + pageItems.length, filteredArchives.length);
-        rangeEl.textContent = `${startIdx}-${endIdx}`;
-    }
-
-    if (btnPrev) btnPrev.disabled = currentPage <= 1;
-    if (btnNext) btnNext.disabled = currentPage >= totalPages;
-
     updateBulkUI();
 }
 
