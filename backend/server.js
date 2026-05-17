@@ -2279,7 +2279,7 @@ app.post('/api/files/cleanup-bulk', authenticateToken, async (req, res) => {
 // ============================================================
 app.get('/api/audit-logs', authenticateToken, async (req, res) => {
     try {
-        if (req.user.role !== 'super_admin') {
+        if (req.user.role !== 'super_admin' && req.user.role !== 'moderator') {
             return res.status(403).json({ error: 'Akses ditolak.' });
         }
 

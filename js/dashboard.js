@@ -484,7 +484,8 @@ function closePreview() {
 async function copyFileLink(fileId, btnEl) {
     try {
         const token = API.getToken();
-        const downloadUrl = `${CONFIG.API_URL}/api/files/${fileId}/download?token=${token}`;
+        const baseUrl = CONFIG.API_URL || window.location.origin;
+        const downloadUrl = `${baseUrl}/api/files/${fileId}/download?token=${token}`;
 
         await navigator.clipboard.writeText(downloadUrl);
         Toast.success('Link Tautan berhasil disalin!');

@@ -10,7 +10,7 @@ const linkHTML = `            <a href="audit.html" data-role="super_admin"
                 Log Aktivitas
             </a>`;
 
-const regex = /(<!-- Sistem -->\s*<p class="text-\[10px\] text-gray-600 uppercase tracking-widest mt-6 mb-1 px-4">Sistem<\/p>)/;
+const regex = /(<p class="text-\[10px\] text-gray-600 uppercase tracking-widest mt-6 mb-1 px-4">Sistem<\/p>)/;
 
 files.forEach(file => {
     let content = fs.readFileSync(file, 'utf8');
