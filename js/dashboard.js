@@ -77,21 +77,26 @@ function populateFilters() {
         });
     }
 
-    // Auto-select INVOICE for admin_zona
-    // Force single-category (INVOICE) for Admin Zona
-    if (!isSuperAdmin()) {
-        const catSelect = document.getElementById('filter-category');
-        if (catSelect) {
-            const nukeFilters = () => {
-                Array.from(catSelect.options).forEach(opt => {
-                    if (opt.value !== 'INVOICE') opt.remove();
-                });
-                catSelect.value = 'INVOICE';
-            };
-            nukeFilters();
-            // Fail-safe retries for late rendering
-            setTimeout(nukeFilters, 500);
-            setTimeout(nukeFilters, 2000);
+    // Inverted Permit: Inject restricted options ONLY for Super Admins
+    const catSelect = document.getElementById('filter-category');
+    if (catSelect) {
+        if (isSuperAdmin()) {
+            // Avoid duplicates
+            if (!catSelect.querySelector('option[value=""]')) {
+                const allOpt = document.createElement('option');
+                allOpt.value = '';
+                allOpt.textContent = 'Semua Kategori';
+                catSelect.prepend(allOpt);
+            }
+            if (!catSelect.querySelector('option[value="PIUTANG"]')) {
+                const piutangOpt = document.createElement('option');
+                piutangOpt.value = 'PIUTANG';
+                piutangOpt.textContent = 'Bukti Pembayaran Piutang';
+                catSelect.appendChild(piutangOpt);
+            }
+        } else {
+            // Force selection to INVOICE for Admin Zona
+            catSelect.value = 'INVOICE';
         }
     }
 
