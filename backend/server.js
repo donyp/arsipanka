@@ -560,6 +560,11 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
             return res.status(400).json({ error: 'zona_id wajib diisi.' });
         }
 
+        // --- SECURITY PATCH: Admin Zona Isolation ---
+        if (req.user.role === 'admin_zona' && parseInt(zona_id) !== req.user.zona_id) {
+            return res.status(403).json({ error: 'Keamanan: Anda hanya dapat mengunggah ke zona yang menjadi tanggung jawab Anda.' });
+        }
+
         // Parallelize Zona/Toko lookups
         const [zonaRes, tokoRes] = await Promise.all([
             supabase.from('zonas').select('kode').eq('id', parseInt(zona_id)).single(),
@@ -750,6 +755,11 @@ app.delete('/api/files/:id', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'File tidak ditemukan.' });
         }
 
+        // --- SECURITY PATCH: Admin Zona Isolation ---
+        if (req.user.role === 'admin_zona' && file.zona_id !== req.user.zona_id) {
+            return res.status(403).json({ error: 'Keamanan: Akses ditolak untuk memodifikasi file di luar zona Anda.' });
+        }
+
         // Soft delete (set deleted_at)
 
         if (isHardDelete) {
@@ -797,12 +807,16 @@ app.post('/api/files/bulk-delete', authenticateToken, requirePermission('soft_de
         }
 
         const now = new Date().toISOString();
-        const { error } = await supabase
+        let query = supabase
             .from('files')
             .update({ deleted_at: now })
             .in('id', ids);
 
-        if (error) throw error;
+        if (req.user.role === 'admin_zona') {
+            query = query.eq('zona_id', req.user.zona_id);
+        }
+
+        const { error } = await query;
 
         // Audit log
         await supabase.from('audit_logs').insert({
@@ -826,12 +840,16 @@ app.post('/api/files/bulk-restore', authenticateToken, requirePermission('restor
             return res.status(400).json({ error: 'ID tidak valid.' });
         }
 
-        const { error } = await supabase
+        let query = supabase
             .from('files')
             .update({ deleted_at: null })
             .in('id', ids);
 
-        if (error) throw error;
+        if (req.user.role === 'admin_zona') {
+            query = query.eq('zona_id', req.user.zona_id);
+        }
+
+        const { error } = await query;
 
         // Audit
         await supabase.from('audit_logs').insert({
@@ -856,10 +874,16 @@ app.post('/api/files/bulk-trash-delete', authenticateToken, requirePermission('h
         }
 
         // Fetch storage paths
-        const { data: files, error } = await supabase
+        let query = supabase
             .from('files')
             .select('id, nama_file, storage_path')
             .in('id', ids);
+
+        if (req.user.role === 'admin_zona') {
+            query = query.eq('zona_id', req.user.zona_id);
+        }
+
+        const { data: files, error } = await query;
 
         if (error || !files) throw error;
 
