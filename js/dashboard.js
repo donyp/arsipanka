@@ -82,13 +82,16 @@ function populateFilters() {
     if (!isSuperAdmin()) {
         const catSelect = document.getElementById('filter-category');
         if (catSelect) {
-            catSelect.value = 'INVOICE';
-            // Aggressively remove all other options (PIUTANG, Semua Kategori, etc)
-            Array.from(catSelect.options).forEach(opt => {
-                if (opt.value !== 'INVOICE') {
-                    opt.remove();
-                }
-            });
+            const nukeFilters = () => {
+                Array.from(catSelect.options).forEach(opt => {
+                    if (opt.value !== 'INVOICE') opt.remove();
+                });
+                catSelect.value = 'INVOICE';
+            };
+            nukeFilters();
+            // Fail-safe retries for late rendering
+            setTimeout(nukeFilters, 500);
+            setTimeout(nukeFilters, 2000);
         }
     }
 
