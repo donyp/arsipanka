@@ -83,13 +83,18 @@ function renderTable() {
                 ${statusBadge}
             </td>
             <td class="p-4 align-top text-right">
-                ${r.status === 'Pending' && isAdmin ? `
+                ${isAdmin ? `
                     <div class="flex items-center justify-end gap-2">
-                        <button onclick="updateRequestStatus(${r.id}, 'Selesai')" class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-105" title="Tandai Selesai">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        </button>
-                        <button onclick="updateRequestStatus(${r.id}, 'Ditolak')" class="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all transform hover:scale-105" title="Tolak">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        ${r.status === 'Pending' ? `
+                            <button onclick="updateRequestStatus(${r.id}, 'Selesai')" class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-105" title="Tandai Selesai">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            </button>
+                            <button onclick="openRejectModal(${r.id})" class="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all transform hover:scale-105" title="Tolak">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        ` : ''}
+                        <button onclick="deleteRequest(${r.id})" class="p-2 rounded-lg bg-gray-500/10 text-gray-500 hover:bg-red-600 hover:text-white transition-all transform hover:scale-105" title="Hapus Tiket Permanen">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         </button>
                     </div>
                 ` : '<span class="text-gray-600 text-sm">-</span>'}
@@ -149,6 +154,18 @@ async function updateRequestStatus(id, newStatus) {
         loadRequests();
     } catch (err) {
         Toast.error('Gagal mengubah status: ' + err.message);
+    }
+}
+
+async function deleteRequest(id) {
+    if (!confirm('Apakah Anda yakin ingin menghapus tiket request ini secara permanen? Data juga akan terhapus dari log Admin Zona.')) return;
+
+    try {
+        await API.delete(`/api/requests/${id}`);
+        Toast.success('Tiket request berhasil dihapus permanen.');
+        loadRequests();
+    } catch (err) {
+        Toast.error('Gagal menghapus tiket: ' + err.message);
     }
 }
 

@@ -2482,6 +2482,23 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// DELETE /api/requests/:id
+app.delete('/api/requests/:id', authenticateToken, async (req, res) => {
+    try {
+        if (req.user.role !== 'super_admin' && req.user.role !== 'moderator') {
+            return res.status(403).json({ error: 'Akses ditolak.' });
+        }
+
+        const { error } = await supabase.from('upload_requests').delete().eq('id', req.params.id);
+        if (error) throw error;
+
+        res.json({ success: true, message: 'Tiket request berhasil dihapus.' });
+    } catch (err) {
+        console.error('Delete Request Error:', err);
+        res.status(500).json({ error: 'Gagal menghapus tiket request.' });
+    }
+});
+
 // ============================================================
 // HEALTH CHECK
 // ============================================================
