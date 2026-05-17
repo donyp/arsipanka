@@ -1157,7 +1157,7 @@ async function submitRequest() {
 
     try {
         await API.post('/api/requests', { pesan });
-        Toast.success('Request berhasil dikirim ke Pusat.');
+        Toast.success('Pesan berhasil dikirim ke ANKA');
         closeRequestModal();
     } catch (err) {
         Toast.error('Gagal mengirim request: ' + err.message);
@@ -1165,4 +1165,57 @@ async function submitRequest() {
         btnSubmit.innerHTML = originalText;
         btnSubmit.disabled = false;
     }
+}
+
+async function loadRequestHistory() {
+    const loader = document.getElementById('history-loading');
+    const emptyState = document.getElementById('history-empty');
+    const tbody = document.getElementById('request-history-body');
+
+    loader.classList.remove('hidden');
+    emptyState.classList.add('hidden');
+    tbody.innerHTML = '';
+
+    try {
+        const res = await API.get('/api/requests?limit=50');
+        const list = res.requests || [];
+
+        if (list.length === 0) {
+            emptyState.classList.remove('hidden');
+        } else {
+            list.forEach(item => {
+                let statusClass = 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
+                if (item.status === 'Selesai') statusClass = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+                else if (item.status === 'Ditolak') statusClass = 'text-red-400 bg-red-500/10 border-red-500/20';
+
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
+                tr.innerHTML = `
+                    <td class="py-3 text-gray-300">${new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                    <td class="py-3 text-white font-medium">${item.pesan}</td>
+                    <td class="py-3 text-right">
+                        <span class="px-2 py-1 rounded text-xs border ${statusClass}">${item.status}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    } catch (err) {
+        Toast.error('Gagal memuat riwayat: ' + err.message);
+    } finally {
+        loader.classList.add('hidden');
+    }
+}
+
+function openRequestHistoryModal() {
+    const modal = document.getElementById('request-history-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        loadRequestHistory();
+    }
+}
+
+function closeRequestHistoryModal() {
+    const modal = document.getElementById('request-history-modal');
+    if (modal) modal.classList.add('hidden');
 }
