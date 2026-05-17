@@ -168,6 +168,9 @@ function updateUserUI() {
         if (headerLogout) headerLogout.classList.replace('hidden', 'flex');
         if (headerRequest) headerRequest.classList.replace('hidden', 'flex');
     }
+
+    // --- RELEASE CLOAK ---
+    document.documentElement.classList.remove('auth-loading');
 }
 
 // ---- Check if current user is Super Admin ----

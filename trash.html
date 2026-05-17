@@ -10,14 +10,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/style.css">
     <script>
-        // Anti-flash for Admin Zona (must be in head to avoid flicker)
+        // Strengthened Anti-Flash (FOUC) System v2.0
         (function () {
+            document.documentElement.classList.add('auth-loading');
             try {
                 const userData = localStorage.getItem('user_data');
                 if (userData) {
                     const user = JSON.parse(userData);
                     if (user.role === 'admin_zona') {
-                        document.documentElement.classList.add('no-sidebar');
+                        document.documentElement.classList.add('role-admin-zona');
                     }
                 }
             } catch (e) { }

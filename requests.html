@@ -9,6 +9,22 @@
         rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/style.css">
+
+    <script>
+        // Strengthened Anti-Flash (FOUC) System v2.0
+        (function () {
+            document.documentElement.classList.add('auth-loading');
+            try {
+                const userData = localStorage.getItem('user_data');
+                if (userData) {
+                    const user = JSON.parse(userData);
+                    if (user.role === 'admin_zona') {
+                        document.documentElement.classList.add('role-admin-zona');
+                    }
+                }
+            } catch (e) { }
+        })();
+    </script>
 </head>
 
 <body class="bg-[#0f172a] min-h-screen text-gray-200">

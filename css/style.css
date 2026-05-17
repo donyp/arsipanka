@@ -602,3 +602,30 @@ select.input-field option:hover {
     align-items: center;
     gap: 20px;
 }
+
+/* ============================================================ 
+   ANTI-SPOILER / FLASH OF UNAUTHORIZED CONTENT (FOUC)
+   Triggered by early script in <head>
+   ============================================================ */
+
+/* Hide body while initial auth status is being verified */
+html.auth-loading body {
+    opacity: 0;
+}
+
+body {
+    transition: opacity 0.25s ease-in-out;
+}
+
+/* Explicitly hide Super Admin/Moderator elements for Admin Zona role */
+.role-admin-zona [data-role="super_admin"],
+.role-admin-zona [data-permission],
+.role-admin-zona #sidebar {
+    display: none !important;
+}
+
+/* Force full-width layout for Admin Zona */
+.role-admin-zona #main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+}
